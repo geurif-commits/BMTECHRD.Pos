@@ -1,0 +1,168 @@
+<Window x:Class="BMTECHRD.Pos.App.Views.DeviceModeChangerDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:core="clr-namespace:BMTECHRD.Pos.App.Core"
+        mc:Ignorable="d"
+        Title="Configurar equipo"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        SizeToContent="WidthAndHeight"
+        Background="#FF121213">
+
+    <Window.Resources>
+        <!-- Botón base -->
+        <Style x:Key="ModeButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="56"/>
+            <Setter Property="Width" Value="240"/>
+            <Setter Property="Margin" Value="8"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#FF2A2B2E"/>
+            <Setter Property="BorderBrush" Value="#FF3A3B3E"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+
+        <!-- Botón seleccionado -->
+        <Style x:Key="SelectedModeButtonStyle" TargetType="Button" BasedOn="{StaticResource ModeButtonStyle}">
+            <Setter Property="BorderBrush" Value="#FF4CAF50"/>
+            <Setter Property="Background" Value="#FF1E2A1E"/>
+        </Style>
+    </Window.Resources>
+
+    <Border Padding="20" Background="#FF121213">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <StackPanel Grid.Row="0" Margin="0,0,0,12">
+                <TextBlock Text="Configurar modo del equipo"
+                           Foreground="White"
+                           FontSize="20"
+                           FontWeight="SemiBold"/>
+                <TextBlock Text="{Binding CurrentMode, StringFormat=Modo actual: {0}}"
+                           Foreground="#FFB0B0B0"
+                           FontSize="13"
+                           Margin="0,6,0,0"/>
+            </StackPanel>
+
+            <!-- Selected -->
+            <Border Grid.Row="1" Background="#FF1E1F21" Padding="12" CornerRadius="10" Margin="0,0,0,12">
+                <TextBlock Text="{Binding SelectedMode, StringFormat=Seleccionado: {0}}"
+                           Foreground="White"
+                           FontSize="14"/>
+            </Border>
+
+            <!-- Buttons -->
+            <UniformGrid Grid.Row="2" Columns="2" Margin="0,0,0,16">
+                <!-- Server -->
+                <Button Command="{Binding SelectModeCommand}"
+                        CommandParameter="{x:Static core:DeviceMode.Server}">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource ModeButtonStyle}">
+                            <Setter Property="Content" Value="🖥 Servidor"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedMode}" Value="{x:Static core:DeviceMode.Server}">
+                                    <Setter Property="Style" Value="{StaticResource SelectedModeButtonStyle}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+
+                <!-- Cashier -->
+                <Button Command="{Binding SelectModeCommand}"
+                        CommandParameter="{x:Static core:DeviceMode.Cashier}">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource ModeButtonStyle}">
+                            <Setter Property="Content" Value="💳 Caja"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedMode}" Value="{x:Static core:DeviceMode.Cashier}">
+                                    <Setter Property="Style" Value="{StaticResource SelectedModeButtonStyle}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+
+                <!-- Kitchen -->
+                <Button Command="{Binding SelectModeCommand}"
+                        CommandParameter="{x:Static core:DeviceMode.Kitchen}">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource ModeButtonStyle}">
+                            <Setter Property="Content" Value="👨‍🍳 Cocina"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedMode}" Value="{x:Static core:DeviceMode.Kitchen}">
+                                    <Setter Property="Style" Value="{StaticResource SelectedModeButtonStyle}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+
+                <!-- Bar -->
+                <Button Command="{Binding SelectModeCommand}"
+                        CommandParameter="{x:Static core:DeviceMode.Bar}">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource ModeButtonStyle}">
+                            <Setter Property="Content" Value="🍸 Bar"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedMode}" Value="{x:Static core:DeviceMode.Bar}">
+                                    <Setter Property="Style" Value="{StaticResource SelectedModeButtonStyle}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+
+                <!-- Floor -->
+                <Button Command="{Binding SelectModeCommand}"
+                        CommandParameter="{x:Static core:DeviceMode.Floor}">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource ModeButtonStyle}">
+                            <Setter Property="Content" Value="🪑 Salón"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedMode}" Value="{x:Static core:DeviceMode.Floor}">
+                                    <Setter Property="Style" Value="{StaticResource SelectedModeButtonStyle}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+            </UniformGrid>
+
+            <!-- Footer -->
+            <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Cancelar"
+                        Width="140"
+                        Height="44"
+                        Margin="0,0,10,0"
+                        Background="#FF2A2B2E"
+                        Foreground="White"
+                        BorderBrush="#FF3A3B3E"
+                        BorderThickness="1"
+                        Command="{Binding CancelCommand}"/>
+
+                <Button Content="✓ Guardar y reiniciar"
+                        Width="220"
+                        Height="44"
+                        Background="#FF4CAF50"
+                        Foreground="White"
+                        FontWeight="SemiBold"
+                        BorderBrush="#FF4CAF50"
+                        BorderThickness="1"
+                        IsEnabled="{Binding CanSave}"
+                        Command="{Binding SaveAndRestartCommand}"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

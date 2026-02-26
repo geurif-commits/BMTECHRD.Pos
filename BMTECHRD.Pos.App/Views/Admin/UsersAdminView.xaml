@@ -1,0 +1,108 @@
+<UserControl x:Class="BMTECHRD.Pos.App.Views.Admin.UsersAdminView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:BMTECHRD.Pos.App.ViewModels.Admin"
+             xmlns:models="clr-namespace:BMTECHRD.Pos.App.Models"
+             xmlns:helpers="clr-namespace:BMTECHRD.Pos.App.Helpers">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="360" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Left: users list -->
+        <StackPanel Grid.Column="0" Margin="8">
+            <TextBlock Text="Usuarios" FontSize="20" FontWeight="Bold" Foreground="White" />
+            <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Margin="0,8,0,8" />
+            <ListBox ItemsSource="{Binding UsersView}" SelectedItem="{Binding SelectedUser, Mode=TwoWay}" Background="#FF121213">
+                <ListBox.ItemTemplate>
+                    <DataTemplate DataType="models:UserListItemModel">
+                        <Border Background="#FF1E1F21" CornerRadius="8" Padding="12" Margin="0,0,0,8">
+                            <StackPanel>
+                                <TextBlock Text="{Binding Username}" FontSize="16" Foreground="White" />
+                                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                    <TextBlock Text="{Binding Role}" Foreground="#DDD" Margin="0,0,8,0" />
+                                    <TextBlock Text="{Binding IsActive, Converter={StaticResource BoolToVis}, StringFormat=Activo}" Foreground="#8F8" />
+                                </StackPanel>
+                                <TextBlock Text="{Binding CreatedAt, StringFormat={}{0:G}}" Foreground="#AAA" FontSize="12" />
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </StackPanel>
+
+        <!-- Right: actions -->
+        <StackPanel Grid.Column="1" Margin="12">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch">
+                <TextBlock Text="Administración - Usuarios" FontSize="22" FontWeight="Bold" Foreground="White" />
+                <TextBlock Text="Cargando..." Foreground="#AAA" Margin="12,4,0,0" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}" />
+            </StackPanel>
+
+            <Border Background="#FF1E1F21" CornerRadius="8" Padding="12" Margin="0,12,0,0">
+                <StackPanel>
+                    <TextBlock Text="Crear usuario" FontWeight="Bold" Foreground="White" />
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <StackPanel Width="220">
+                            <TextBlock Text="Usuario" Foreground="#DDD" />
+                            <TextBox Text="{Binding NewUsername, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+                        <StackPanel Width="220" Margin="12,0,0,0">
+                            <TextBlock Text="Password" Foreground="#DDD" />
+                            <PasswordBox helpers:PasswordBoxHelper.BindPassword="True" helpers:PasswordBoxHelper.BoundPassword="{Binding NewPassword, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <StackPanel Width="160">
+                            <TextBlock Text="PIN (4 dígitos)" Foreground="#DDD" />
+                            <TextBox Text="{Binding NewPin4, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" MaxLength="4" helpers:NumericTextBoxBehavior.IsNumericOnly="True" helpers:NumericTextBoxBehavior.MaxDigits="4" />
+                        </StackPanel>
+                        <StackPanel Width="160" Margin="12,0,0,0">
+                            <TextBlock Text="Rol" Foreground="#DDD" />
+                            <ComboBox SelectedValue="{Binding NewRole}" ItemsSource="{Binding Roles}" />
+                        </StackPanel>
+                        <CheckBox Content="Activo" IsChecked="{Binding NewIsActive}" Margin="12,22,0,0" />
+                    </StackPanel>
+                    <Button Content="Crear" Width="200" Height="44" Margin="0,12,0,0" Command="{Binding CreateUserCommand}" />
+                </StackPanel>
+            </Border>
+
+            <Border Background="#FF1E1F21" CornerRadius="8" Padding="12" Margin="0,12,0,0">
+                <StackPanel>
+                    <TextBlock Text="Editar usuario" FontWeight="Bold" Foreground="White" />
+                    <TextBlock Text="Selecciona un usuario en la lista" Foreground="#AAA" />
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <StackPanel Width="200">
+                            <TextBlock Text="Rol" Foreground="#DDD" />
+                            <ComboBox SelectedValue="{Binding EditRole}" ItemsSource="{Binding Roles}" />
+                        </StackPanel>
+                        <CheckBox Content="Activo" IsChecked="{Binding EditIsActive}" Margin="12,22,0,0" />
+                    </StackPanel>
+                    <Button Content="Guardar cambios" Width="220" Height="44" Margin="0,12,0,0" Command="{Binding UpdateUserCommand}" />
+                </StackPanel>
+            </Border>
+
+            <Border Background="#FF1E1F21" CornerRadius="8" Padding="12" Margin="0,12,0,0">
+                <StackPanel>
+                    <TextBlock Text="Reset Password" FontWeight="Bold" Foreground="White" />
+                    <TextBlock Text="Nueva password" Foreground="#DDD" />
+                    <PasswordBox helpers:PasswordBoxHelper.BindPassword="True" helpers:PasswordBoxHelper.BoundPassword="{Binding ResetPasswordValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    <Button Content="Reset" Width="160" Height="44" Margin="0,12,0,0" Command="{Binding ResetPasswordCommand}" />
+                </StackPanel>
+            </Border>
+
+            <Border Background="#FF1E1F21" CornerRadius="8" Padding="12" Margin="0,12,0,0">
+                <StackPanel>
+                    <TextBlock Text="Reset PIN" FontWeight="Bold" Foreground="White" />
+                    <TextBlock Text="Nuevo PIN (4 dígitos)" Foreground="#DDD" />
+                    <TextBox Text="{Binding ResetPinValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" MaxLength="4" helpers:NumericTextBoxBehavior.IsNumericOnly="True" helpers:NumericTextBoxBehavior.MaxDigits="4" />
+                    <Button Content="Reset PIN" Width="160" Height="44" Margin="0,12,0,0" Command="{Binding ResetPinCommand}" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </Grid>
+</UserControl>

@@ -1,0 +1,12 @@
+﻿<Window x:Class="BMTECHRD.Pos.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="BMTECHRD POS"
+        Height="900"
+        Width="1400"
+        Background="#FF121213"
+        WindowStartupLocation="CenterScreen">
+    <Grid>
+        <ContentControl x:Name="MainContent" />
+    </Grid>
+</Window>

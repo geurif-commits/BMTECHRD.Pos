@@ -1,0 +1,77 @@
+<Window x:Class="BMTECHRD.Pos.App.DeviceModeSelectionWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Seleccionar Modo del Dispositivo" 
+        WindowStartupLocation="CenterScreen"
+        Width="600" 
+        Height="500"
+        Background="#FF121213"
+        WindowStyle="SingleBorderWindow">
+    <Grid>
+        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+            <TextBlock Text="Seleccione el modo del dispositivo" 
+                       FontSize="28" 
+                       FontWeight="Bold" 
+                       Foreground="White" 
+                       TextAlignment="Center" 
+                       Margin="0,0,0,24" />
+
+            <Grid Width="500">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <!-- Servidor -->
+                <Button Grid.Column="0" Grid.Row="0" 
+                        Content="Servidor" 
+                        Height="80" 
+                        FontSize="16" 
+                        FontWeight="Bold"
+                        Margin="8" 
+                        Click="OnServerClick" />
+
+                <!-- Caja -->
+                <Button Grid.Column="1" Grid.Row="0" 
+                        Content="Caja" 
+                        Height="80" 
+                        FontSize="16" 
+                        FontWeight="Bold"
+                        Margin="8" 
+                        Click="OnCashierClick" />
+
+                <!-- Cocina -->
+                <Button Grid.Column="0" Grid.Row="1" 
+                        Content="Cocina" 
+                        Height="80" 
+                        FontSize="16" 
+                        FontWeight="Bold"
+                        Margin="8" 
+                        Click="OnKitchenClick" />
+
+                <!-- Bar -->
+                <Button Grid.Column="1" Grid.Row="1" 
+                        Content="Bar" 
+                        Height="80" 
+                        FontSize="16" 
+                        FontWeight="Bold"
+                        Margin="8" 
+                        Click="OnBarClick" />
+
+                <!-- Salón -->
+                <Button Grid.Column="0" Grid.Row="2" Grid.ColumnSpan="2"
+                        Content="Salón" 
+                        Height="80" 
+                        FontSize="16" 
+                        FontWeight="Bold"
+                        Margin="8" 
+                        Click="OnFloorClick" />
+            </Grid>
+        </StackPanel>
+    </Grid>
+</Window>

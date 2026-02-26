@@ -1,0 +1,181 @@
+<UserControl x:Class="BMTECHRD.Pos.App.Views.Admin.ShiftsAdminView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:models="clr-namespace:BMTECHRD.Pos.App.Models">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="500" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Header and error banner -->
+        <StackPanel Grid.Column="0" Grid.ColumnSpan="2" VerticalAlignment="Top" Background="#FF1E1F21">
+            <StackPanel VerticalAlignment="Center" Margin="16">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Administración - Turnos" FontSize="22" FontWeight="Bold" Foreground="White" />
+                    <TextBlock Text="Cargando..." Foreground="#AAA" Margin="12,4,0,0" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}" />
+                </StackPanel>
+                <TextBlock Text="{Binding Error}" Foreground="#FF4444" FontSize="12" Visibility="{Binding ErrorVisible, Converter={StaticResource BoolToVis}}" Margin="0,4,0,0" />
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Shifts List Column -->
+        <StackPanel Grid.Column="0" Margin="12,80,0,0">
+            <!-- Filters -->
+            <Border Background="#FF1E1F21" CornerRadius="8" Padding="12" Margin="0,0,12,0">
+                <StackPanel>
+                    <TextBlock Text="Filtros" FontWeight="Bold" Foreground="White" />
+
+                    <TextBlock Text="Estado" Foreground="#DDD" Margin="0,8,0,0" />
+                    <ComboBox SelectedItem="{Binding SelectedStatus}" Background="#FF2A2B2E" Foreground="White" Margin="0,4,0,0">
+                        <ComboBoxItem Content="" />
+                        <ComboBoxItem Content="OPEN" />
+                        <ComboBoxItem Content="CLOSED" />
+                    </ComboBox>
+
+                    <TextBlock Text="Desde" Foreground="#DDD" Margin="0,8,0,0" />
+                    <DatePicker SelectedDate="{Binding FromDate}" Background="#FF2A2B2E" Foreground="White" Margin="0,4,0,0" />
+
+                    <TextBlock Text="Hasta" Foreground="#DDD" Margin="0,8,0,0" />
+                    <DatePicker SelectedDate="{Binding ToDate}" Background="#FF2A2B2E" Foreground="White" Margin="0,4,0,0" />
+
+                    <TextBlock Text="Límite" Foreground="#DDD" Margin="0,8,0,0" />
+                    <ComboBox SelectedValue="{Binding Limit}" Background="#FF2A2B2E" Foreground="White" Margin="0,4,0,0">
+                        <ComboBoxItem Content="100" />
+                        <ComboBoxItem Content="200" />
+                        <ComboBoxItem Content="500" />
+                        <ComboBoxItem Content="1000" />
+                    </ComboBox>
+
+                    <Button Content="Refrescar" Width="200" Height="40" Margin="0,12,0,0" Command="{Binding LoadShiftsCommand}" />
+                </StackPanel>
+            </Border>
+
+            <!-- Shifts List -->
+            <ListBox ItemsSource="{Binding ShiftsView}" SelectedItem="{Binding SelectedShift, Mode=TwoWay}" 
+                     Background="Transparent" Margin="0,12,12,0" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                <ListBox.ItemTemplate>
+                    <DataTemplate DataType="models:ShiftListItemModel">
+                        <Border Background="#FF1E1F21" CornerRadius="8" Padding="12" Margin="0,0,0,8" BorderThickness="2" 
+                                BorderBrush="{Binding IsOpen, Converter={StaticResource BoolToBrushConverter}}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="{Binding Username}" FontSize="18" FontWeight="Bold" Foreground="White" />
+                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                        <TextBlock Text="Abierto: " Foreground="#DDD" />
+                                        <TextBlock Text="{Binding OpenedAtLabel}" Foreground="#AAA" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                        <TextBlock Text="Cerrado: " Foreground="#DDD" />
+                                        <TextBlock Text="{Binding ClosedAtLabel}" Foreground="#AAA" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                        <TextBlock Text="Efectivo inicial: " Foreground="#DDD" />
+                                        <TextBlock Text="{Binding OpeningCash, StringFormat=C}" Foreground="#4CAF50" FontWeight="Bold" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                        <TextBlock Text="Efectivo final: " Foreground="#DDD" />
+                                        <TextBlock Text="{Binding ClosingCash, StringFormat=C}" Foreground="#4CAF50" FontWeight="Bold" />
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1" VerticalAlignment="Top" Margin="12,0,0,0">
+                                    <Border CornerRadius="4" Padding="8,4" MinWidth="80" Background="#FF4CAF50">
+                                        <TextBlock Text="{Binding StatusLabel}" Foreground="White" FontWeight="Bold" 
+                                                   TextAlignment="Center" />
+                                    </Border>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </StackPanel>
+
+        <!-- Summary Column -->
+        <StackPanel Grid.Column="1" Margin="12,80,12,0">
+            <Border Background="#FF1E1F21" CornerRadius="8" Padding="16" Margin="0,0,0,0">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,12">
+                        <TextBlock Text="Resumen Turno" FontSize="20" FontWeight="Bold" Foreground="White" />
+                        <Button Content="Limpiar" Width="100" Height="36" Margin="12,0,0,0" 
+                                Command="{Binding ClearSummaryCommand}" VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <!-- No selection message -->
+                    <TextBlock Text="Seleccione un turno para ver el resumen" Foreground="#888" 
+                               TextAlignment="Center" Margin="0,40,0,0" />
+
+                    <!-- Summary details -->
+                    <StackPanel>
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Total de Ventas" Foreground="#DDD" FontSize="12" />
+                                <TextBlock Text="{Binding Summary.TotalPayments, StringFormat=C}" 
+                                           Foreground="White" FontSize="24" FontWeight="Bold" />
+                            </StackPanel>
+
+                            <Border Grid.Column="1" CornerRadius="8" Padding="12" MinWidth="120" Background="#FF3D3D">
+                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                    <TextBlock Text="Diferencia" Foreground="White" FontSize="12" TextAlignment="Center" />
+                                    <TextBlock Text="{Binding Summary.Difference, StringFormat=C}" 
+                                               Foreground="White" FontSize="18" FontWeight="Bold" TextAlignment="Center" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <!-- Sales breakdown -->
+                        <Border Background="#FF2A2B2E" CornerRadius="8" Padding="12" Margin="0,12,0,0">
+                            <StackPanel>
+                                <TextBlock Text="Desglose de Ventas" FontWeight="Bold" Foreground="White" />
+
+                                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                    <TextBlock Text="Efectivo:" Foreground="#DDD" Width="120" />
+                                    <TextBlock Text="{Binding Summary.SalesCash, StringFormat=C}" Foreground="#4CAF50" FontWeight="Bold" />
+                                </StackPanel>
+
+                                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                    <TextBlock Text="Tarjeta:" Foreground="#DDD" Width="120" />
+                                    <TextBlock Text="{Binding Summary.SalesCard, StringFormat=C}" Foreground="#4CAF50" FontWeight="Bold" />
+                                </StackPanel>
+
+                                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                    <TextBlock Text="Transferencia:" Foreground="#DDD" Width="120" />
+                                    <TextBlock Text="{Binding Summary.SalesTransfer, StringFormat=C}" Foreground="#4CAF50" FontWeight="Bold" />
+                                </StackPanel>
+
+                                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                    <TextBlock Text="Mixto:" Foreground="#DDD" Width="120" />
+                                    <TextBlock Text="{Binding Summary.SalesMixed, StringFormat=C}" Foreground="#4CAF50" FontWeight="Bold" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Expected cash -->
+                        <Border Background="#FF2A2B2E" CornerRadius="8" Padding="12" Margin="0,12,0,0">
+                            <StackPanel>
+                                <TextBlock Text="Efectivo Esperado" FontWeight="Bold" Foreground="White" />
+                                <TextBlock Text="{Binding Summary.ExpectedCash, StringFormat=C}" 
+                                           Foreground="#4CAF50" FontSize="18" FontWeight="Bold" Margin="0,8,0,0" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </Grid>
+</UserControl>

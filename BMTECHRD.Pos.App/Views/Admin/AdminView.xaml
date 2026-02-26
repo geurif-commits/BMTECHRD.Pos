@@ -1,0 +1,212 @@
+<UserControl x:Class="BMTECHRD.Pos.App.Views.Admin.AdminView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:views="clr-namespace:BMTECHRD.Pos.App.Views.Admin"
+             xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+
+        <!-- ============ THEME / BRUSHES ============ -->
+        <SolidColorBrush x:Key="Bg" Color="#FF121213"/>
+        <SolidColorBrush x:Key="Card" Color="#FF1E1F21"/>
+        <SolidColorBrush x:Key="Card2" Color="#FF17181A"/>
+        <SolidColorBrush x:Key="Stroke" Color="#FF2E2F33"/>
+        <SolidColorBrush x:Key="Stroke2" Color="#FF3A3B3E"/>
+        <SolidColorBrush x:Key="Text" Color="#FFEDEDED"/>
+        <SolidColorBrush x:Key="Muted" Color="#FFB9BCC2"/>
+        <SolidColorBrush x:Key="Accent" Color="#FF3B82F6"/> <!-- Azul moderno -->
+        <SolidColorBrush x:Key="Accent2" Color="#FF2563EB"/>
+
+        <!-- ============ BASE TEXT ============ -->
+        <Style TargetType="{x:Type TextBlock}">
+            <Setter Property="Foreground" Value="{StaticResource Text}"/>
+            <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
+            <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
+        </Style>
+
+        <!-- ============ BUTTON STYLE ============ -->
+        <Style x:Key="PrimaryButton" TargetType="{x:Type Button}">
+            <Setter Property="Height" Value="48"/>
+            <Setter Property="Padding" Value="14,0"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Background" Value="{StaticResource Card2}"/>
+            <Setter Property="Foreground" Value="{StaticResource Text}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource Stroke2}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="10">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#FF232427"/>
+                                <Setter Property="BorderBrush" Value="#FF4A4B50"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="#FF1C1D20"/>
+                                <Setter Property="BorderBrush" Value="#FF5B5C61"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.55"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ============ TABCONTROL STYLE ============ -->
+        <Style TargetType="{x:Type TabControl}">
+            <Setter Property="Background" Value="{StaticResource Bg}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource Stroke}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type TabControl}">
+                        <Grid SnapsToDevicePixels="True">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Header strip -->
+                            <Border Grid.Row="0"
+                                    Background="{StaticResource Card}"
+                                    BorderBrush="{StaticResource Stroke}"
+                                    BorderThickness="1"
+                                    CornerRadius="14,14,0,0"
+                                    Padding="10,10,10,8">
+                                <TabPanel IsItemsHost="True" Margin="2,0,2,0"/>
+                            </Border>
+
+                            <!-- Content -->
+                            <Border Grid.Row="1"
+                                    Background="{StaticResource Card2}"
+                                    BorderBrush="{StaticResource Stroke}"
+                                    BorderThickness="1"
+                                    CornerRadius="0,0,14,14"
+                                    Padding="14">
+                                <ContentPresenter ContentSource="SelectedContent"/>
+                            </Border>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ============ TABITEM STYLE ============ -->
+        <Style TargetType="{x:Type TabItem}">
+            <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type TabItem}">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="12"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#FF222327"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#FF3A3B3E"/>
+                                <Setter Property="Foreground" Value="{StaticResource Text}"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#FF1F2023"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#FF33343A"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.6"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+    </UserControl.Resources>
+
+    <Grid Background="{StaticResource Bg}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- HEADER -->
+        <Border Grid.Row="0" Background="{StaticResource Card}" Padding="16" BorderBrush="{StaticResource Stroke}" BorderThickness="0,0,0,1">
+            <DockPanel LastChildFill="True">
+                <StackPanel Orientation="Vertical" DockPanel.Dock="Left" VerticalAlignment="Center">
+                    <TextBlock Text="Panel de Administración"
+                               FontSize="20"
+                               FontWeight="SemiBold" />
+                    <TextBlock Text="Gestión del negocio • Seguridad y auditoría"
+                               Margin="0,4,0,0"
+                               FontSize="12"
+                               Foreground="{StaticResource Muted}" />
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
+                    <!-- ✅ SOLO ADMIN/SUPERVISOR -->
+                    <Button x:Name="BtnConfigureDevice"
+                            Style="{StaticResource PrimaryButton}"
+                            Content="⚙ Configurar equipo"
+                            MinWidth="190"
+                            Margin="8,0,0,0"
+                            Visibility="{Binding CanConfigureDevice, Converter={StaticResource BoolToVis}}"
+                            Command="{Binding ConfigureDeviceCommand}" />
+                    <!-- Si aún no tienes Command, puedes volver a Click temporalmente:
+                         Click="OnConfigureDeviceClick"
+                    -->
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- TABS -->
+        <TabControl Grid.Row="1" Margin="16">
+
+            <!-- Opción 1: Mantener instancias (como lo tienes) -->
+            <TabItem Header="Usuarios">
+                <views:UsersAdminView />
+            </TabItem>
+
+            <TabItem Header="Categorías">
+                <TextBlock Text="Categorías - placeholder" Foreground="{StaticResource Muted}" />
+            </TabItem>
+
+            <TabItem Header="Productos">
+                <TextBlock Text="Productos - placeholder" Foreground="{StaticResource Muted}" />
+            </TabItem>
+
+            <TabItem Header="Inventario">
+                <views:InventoryAdminView />
+            </TabItem>
+
+            <TabItem Header="Turnos">
+                <views:ShiftsAdminView />
+            </TabItem>
+
+            <TabItem Header="Reportes">
+                <views:ReportsAdminView />
+            </TabItem>
+
+        </TabControl>
+    </Grid>
+</UserControl>

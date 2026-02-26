@@ -1,0 +1,266 @@
+<Window x:Class="BMTECHRD.Pos.App.Views.DeviceModeChangerDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:core="clr-namespace:BMTECHRD.Pos.App.Core"
+        Title="Modo del dispositivo" 
+        WindowStartupLocation="CenterOwner"
+        Background="#FF121213"
+        Foreground="White"
+        Width="520"
+        Height="720"
+        ShowInTaskbar="False"
+        WindowStyle="SingleBorderWindow"
+        ResizeMode="NoResize"
+        FontFamily="Segoe UI">
+
+    <Window.Resources>
+        <!-- Estilo base para botones de modo (ETAPA 8.1) -->
+        <Style x:Key="ModeButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#FF2A2B2E" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,8" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#FF3A3B3E" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,24">
+            <TextBlock Text="Configurar modo del dispositivo" 
+                       FontSize="20" 
+                       FontWeight="Bold" 
+                       Foreground="White" />
+            <TextBlock Text="Seleccione el modo para este equipo" 
+                       FontSize="12" 
+                       Foreground="#AAA" 
+                       Margin="0,8,0,0" />
+        </StackPanel>
+
+        <!-- Modo Actual -->
+        <Border Grid.Row="1" Background="#FF1E1F21" CornerRadius="8" Padding="16" Margin="0,0,0,24">
+            <StackPanel>
+                <TextBlock Text="Modo actual:" Foreground="#AAA" FontSize="12" />
+                <TextBlock Text="{Binding CurrentMode}" 
+                           FontSize="16" 
+                           FontWeight="Bold" 
+                           Foreground="#4CAF50" 
+                           Margin="0,8,0,0" />
+            </StackPanel>
+        </Border>
+
+        <!-- Botones de Selección -->
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="0">
+                <TextBlock Text="Seleccione el nuevo modo:" Foreground="#DDD" FontSize="12" FontWeight="Bold" Margin="0,0,0,12" />
+
+                <!-- Servidor (ETAPA 8.1: DataTrigger para resaltar selección) -->
+                <Button Content="🖥 Servidor" 
+                        Height="56" 
+                        FontSize="14"
+                        FontWeight="Bold"
+                        Margin="0,0,0,12"
+                        Command="{Binding SelectServerCommand}"
+                        Style="{StaticResource ModeButtonStyle}">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource ModeButtonStyle}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedMode}" Value="{x:Static core:DeviceMode.Server}">
+                                    <Setter Property="BorderBrush" Value="#4CAF50" />
+                                    <Setter Property="Background" Value="#1A2B1E" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+
+                <!-- Caja (ETAPA 8.1: DataTrigger) -->
+                <Button Content="💳 Caja" 
+                        Height="56" 
+                        FontSize="14"
+                        FontWeight="Bold"
+                        Margin="0,0,0,12"
+                        Command="{Binding SelectCashierCommand}"
+                        Style="{StaticResource ModeButtonStyle}">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource ModeButtonStyle}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedMode}" Value="{x:Static core:DeviceMode.Cashier}">
+                                    <Setter Property="BorderBrush" Value="#4CAF50" />
+                                    <Setter Property="Background" Value="#1A2B1E" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+
+                <!-- Cocina (ETAPA 8.1: DataTrigger) -->
+                <Button Content="👨‍🍳 Cocina" 
+                        Height="56" 
+                        FontSize="14"
+                        FontWeight="Bold"
+                        Margin="0,0,0,12"
+                        Command="{Binding SelectKitchenCommand}"
+                        Style="{StaticResource ModeButtonStyle}">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource ModeButtonStyle}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedMode}" Value="{x:Static core:DeviceMode.Kitchen}">
+                                    <Setter Property="BorderBrush" Value="#4CAF50" />
+                                    <Setter Property="Background" Value="#1A2B1E" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+
+                <!-- Bar (ETAPA 8.1: DataTrigger) -->
+                <Button Content="🍸 Bar" 
+                        Height="56" 
+                        FontSize="14"
+                        FontWeight="Bold"
+                        Margin="0,0,0,12"
+                        Command="{Binding SelectBarCommand}"
+                        Style="{StaticResource ModeButtonStyle}">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource ModeButtonStyle}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedMode}" Value="{x:Static core:DeviceMode.Bar}">
+                                    <Setter Property="BorderBrush" Value="#4CAF50" />
+                                    <Setter Property="Background" Value="#1A2B1E" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+
+                <!-- Salón (ETAPA 8.1: DataTrigger) -->
+                <Button Content="🪑 Salón" 
+                        Height="56" 
+                        FontSize="14"
+                        FontWeight="Bold"
+                        Margin="0,0,0,16"
+                        Command="{Binding SelectFloorCommand}"
+                        Style="{StaticResource ModeButtonStyle}">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource ModeButtonStyle}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedMode}" Value="{x:Static core:DeviceMode.Floor}">
+                                    <Setter Property="BorderBrush" Value="#4CAF50" />
+                                    <Setter Property="Background" Value="#1A2B1E" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+
+                <!-- Indicador de selección actual (ETAPA 8.1: visible + highlighting) -->
+                <Border Background="#FF1E1F21" CornerRadius="6" Padding="12" Margin="0,0,0,0">
+                    <TextBlock Text="{Binding SelectedMode, StringFormat='✓ Seleccionado: {0}'}" 
+                               Foreground="#4CAF50" 
+                               FontSize="13" 
+                               FontWeight="Bold" />
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Botones de Acción -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,24,0,0">
+            <Button Content="Cancelar" 
+                    Width="120" 
+                    Height="44"
+                    Margin="0,0,12,0"
+                    Command="{Binding CancelCommand}"
+                    Background="#FF2A2B2E"
+                    Foreground="White"
+                    BorderThickness="1"
+                    BorderBrush="#555"
+                    Cursor="Hand"
+                    FontWeight="Bold">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{TemplateBinding Background}"
+                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                            CornerRadius="6">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#FF3A3B3E" />
+                                            <Setter Property="BorderBrush" Value="#888" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Button.Style>
+            </Button>
+
+            <Button Content="✓ Guardar y reiniciar" 
+                    Width="180" 
+                    Height="44"
+                    Command="{Binding SaveCommand}"
+                    IsEnabled="{Binding CanSave}"
+                    Background="#FF4CAF50"
+                    Foreground="White"
+                    BorderThickness="0"
+                    Cursor="Hand"
+                    FontWeight="Bold">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{TemplateBinding Background}"
+                                            BorderBrush="{TemplateBinding BorderBrush}"
+                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                            CornerRadius="6">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#FF5CB85C" />
+                                        </Trigger>
+                                        <Trigger Property="IsEnabled" Value="False">
+                                            <Setter Property="Background" Value="#FF888888" />
+                                            <Setter Property="Foreground" Value="#FFcccccc" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Button.Style>
+            </Button>
+        </StackPanel>
+    </Grid>
+</Window>

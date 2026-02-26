@@ -1,0 +1,116 @@
+<UserControl x:Class="BMTECHRD.Pos.App.Views.Admin.InventoryAdminView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:BMTECHRD.Pos.App.ViewModels.Admin"
+             xmlns:models="clr-namespace:BMTECHRD.Pos.App.Models"
+             xmlns:helpers="clr-namespace:BMTECHRD.Pos.App.Helpers">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="360" />
+            <ColumnDefinition Width="360" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Stock column -->
+        <StackPanel Grid.Column="0" Margin="8">
+            <TextBlock Text="Stock" FontSize="20" FontWeight="Bold" Foreground="White" />
+            <TextBox Text="{Binding StockSearchText, UpdateSourceTrigger=PropertyChanged}" Margin="0,8,0,8" />
+            <ListBox ItemsSource="{Binding StockView}" SelectedItem="{Binding SelectedProduct, Mode=TwoWay}" Background="#FF121213">
+                <ListBox.ItemTemplate>
+                    <DataTemplate DataType="models:StockItemModel">
+                        <Border Background="#FF1E1F21" CornerRadius="8" Padding="12" Margin="0,0,0,8">
+                            <StackPanel>
+                                <TextBlock Text="{Binding Name}" FontSize="16" Foreground="White" />
+                                <TextBlock Text="{Binding Stock}" Foreground="#DDD" FontSize="20" FontWeight="Bold" />
+                                <TextBlock Text="{Binding TrackInventory, StringFormat=Track: {0}}" Foreground="#AAA" FontSize="12" />
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </StackPanel>
+
+        <!-- Adjust column -->
+        <StackPanel Grid.Column="1" Margin="12">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Administración - Inventario" FontSize="22" FontWeight="Bold" Foreground="White" />
+                <TextBlock Text="Cargando..." Foreground="#AAA" Margin="12,4,0,0" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}" />
+            </StackPanel>
+
+            <Border Background="#FF1E1F21" CornerRadius="8" Padding="12" Margin="0,12,0,0">
+                <StackPanel>
+                    <TextBlock Text="Ajuste rápido" FontWeight="Bold" Foreground="White" />
+                    <TextBlock Text="Producto:" Foreground="#DDD" />
+                    <TextBlock Text="{Binding SelectedProduct.Name}" Foreground="White" FontWeight="Bold" />
+
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <Button Content="+1" Width="64" Height="48" Margin="4" Command="{Binding AdjustByCommand}" CommandParameter="1" />
+                        <Button Content="+5" Width="64" Height="48" Margin="4" Command="{Binding AdjustByCommand}" CommandParameter="5" />
+                        <Button Content="+10" Width="64" Height="48" Margin="4" Command="{Binding AdjustByCommand}" CommandParameter="10" />
+                        <Button Content="-1" Width="64" Height="48" Margin="4" Command="{Binding AdjustByCommand}" CommandParameter="-1" />
+                        <Button Content="-5" Width="64" Height="48" Margin="4" Command="{Binding AdjustByCommand}" CommandParameter="-5" />
+                        <Button Content="-10" Width="64" Height="48" Margin="4" Command="{Binding AdjustByCommand}" CommandParameter="-10" />
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <TextBlock Text="Delta" Foreground="#DDD" />
+                        <TextBox Text="{Binding AdjustDelta, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="120" Margin="8,0,0,0" 
+                                 helpers:NumericTextBoxBehavior.IsNumericOnly="True"
+helpers:NumericTextBoxBehavior.AllowNegative="True"
+helpers:NumericTextBoxBehavior.MaxDigits="6" />
+                    </StackPanel>
+
+                    <TextBlock Text="Motivo" Foreground="#DDD" Margin="0,8,0,0" />
+                    <TextBox Text="{Binding AdjustReason, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <Button Content="Aplicar ajuste" Width="220" Height="56" Margin="0,12,0,0" Command="{Binding ApplyAdjustCommand}" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- Movements column -->
+        <StackPanel Grid.Column="2" Margin="12">
+            <Border Background="#FF1E1F21" CornerRadius="8" Padding="12" Margin="0,12,0,0">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="Kardex" FontWeight="Bold" Foreground="White" />
+                        <StackPanel Orientation="Horizontal" Margin="12,0,0,0">
+                            <TextBlock Text="From" Foreground="#DDD" />
+                            <DatePicker SelectedDate="{Binding FromDate}" Margin="8,0,0,0" />
+                            <TextBlock Text="To" Foreground="#DDD" Margin="12,0,0,0" />
+                            <DatePicker SelectedDate="{Binding ToDate}" Margin="8,0,0,0" />
+                            <ComboBox SelectedValue="{Binding Limit}" Width="120" Margin="12,0,0,0">
+                                <ComboBoxItem Content="200" />
+                                <ComboBoxItem Content="500" />
+                                <ComboBoxItem Content="1000" />
+                            </ComboBox>
+                            <Button Content="Refrescar" Width="120" Height="36" Margin="12,0,0,0" Command="{Binding LoadMovementsCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <ListBox ItemsSource="{Binding Movements}" Margin="0,12,0,0">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="models:InventoryMovementModel">
+                                <Border Background="#FF1E1F21" CornerRadius="8" Padding="12" Margin="0,0,0,8">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding QuantityDelta}" Foreground="White" FontSize="20" FontWeight="Bold" Width="80" />
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding ProductName}" Foreground="#DDD" />
+                                            <TextBlock Text="{Binding Reason}" Foreground="#AAA" />
+                                            <TextBlock Text="{Binding TimeLabel}" Foreground="#888" FontSize="12" />
+                                        </StackPanel>
+                                        <TextBlock Text="{Binding ActorUsername}" Foreground="#BBB" HorizontalAlignment="Right" Margin="12,0,0,0" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </Grid>
+</UserControl>
