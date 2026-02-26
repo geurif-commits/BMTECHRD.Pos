@@ -2,6 +2,9 @@
 using System.Net.Http;
 using System.Windows;
 using BMTECHRD.Pos.App.Services;
+using Serilog;
+using Serilog.Events;
+using Microsoft.Extensions.Logging;
 using BMTECHRD.Pos.App.ViewModels.Auth;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -27,6 +30,33 @@ public partial class App : System.Windows.Application
         }
 
         // 2) DI container (ETAPA 9 WPF Auth)
+        // configure Serilog file sink for auth traces
+        try
+        {
+            var logDir = BMTECHRD.Pos.App.Core.AppPaths.LogsFolder;
+            System.IO.Directory.CreateDirectory(logDir);
+            var path = System.IO.Path.Combine(logDir, "auth-.log");
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Information()
+                .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+                .MinimumLevel.Override("System", LogEventLevel.Warning)
+                .Enrich.FromLogContext()
+                .WriteTo.File(
+                    path: path,
+                    rollingInterval: Serilog.RollingInterval.Day,
+                    retainedFileCountLimit: 30,
+                    fileSizeLimitBytes: 10_000_000,
+                    rollOnFileSizeLimit: true,
+                    shared: true,
+                    flushToDiskInterval: TimeSpan.FromSeconds(1))
+                .WriteTo.Console()
+                .CreateLogger();
+        }
+        catch
+        {
+            // ignore logging setup failures
+        }
+
         Services = ConfigureServices(config);
 
         // 3) Iniciar MainWindow (controla navegación)
@@ -46,9 +76,6 @@ public partial class App : System.Windows.Application
         // Session singleton (tokens + DeviceId persistente)
         services.AddSingleton<AuthSessionService>();
 
-        // ApiClient + AuthHeaderHandler + HttpClient
-        services.AddTransient<AuthHeaderHandler>();
-
         // HttpClient: base URL desde config (si no está, usa localhost)
         var baseUrl = TryReadStringProperty(config, "ApiBaseUrl")
                    ?? TryReadStringProperty(config, "BaseUrl")
@@ -57,25 +84,26 @@ public partial class App : System.Windows.Application
 
         if (!baseUrl.EndsWith('/')) baseUrl += "/";
 
-        // ApiClient factory: construye HttpClient con AuthHeaderHandler y resuelve la dependencia circular
-        services.AddTransient<ApiClient>(sp =>
+        // Logging (Serilog)
+        services.AddLogging(builder => builder.AddSerilog());
+
+        // Auth client (no handlers) - used for login/refresh to avoid recursion
+        services.AddHttpClient<AuthClient>(c =>
         {
-            var session = sp.GetRequiredService<AuthSessionService>();
-            var authHandler = new AuthHeaderHandler(session)
-            {
-                InnerHandler = new System.Net.Http.HttpClientHandler()
-            };
-
-            var http = new System.Net.Http.HttpClient(authHandler)
-            {
-                BaseAddress = new Uri(baseUrl),
-                Timeout = TimeSpan.FromSeconds(30)
-            };
-
-            var apiClient = new ApiClient(http);
-            authHandler.SetApiClient(apiClient);
-            return apiClient;
+            c.BaseAddress = new Uri(baseUrl);
+            c.Timeout = TimeSpan.FromSeconds(30);
         });
+
+        // Register AuthHeaderHandler so it can be used as a message handler
+        services.AddTransient<AuthHeaderHandler>();
+
+        // ApiClient typed client that uses AuthHeaderHandler to attach tokens and refresh
+        services.AddHttpClient<ApiClient>(c =>
+        {
+            c.BaseAddress = new Uri(baseUrl);
+            c.Timeout = TimeSpan.FromSeconds(60);
+        })
+        .AddHttpMessageHandler<AuthHeaderHandler>();
 
         // Navigation
         services.AddSingleton<INavigationService, NavigationService>();

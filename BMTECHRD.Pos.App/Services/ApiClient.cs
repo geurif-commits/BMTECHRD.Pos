@@ -18,8 +18,17 @@ public sealed class ApiClient
     public async Task<List<TableModel>> GetTablesAsync(Guid businessId)
     {
         var url = $"api/tables?businessId={businessId}";
-        var res = await _http.GetFromJsonAsync<List<TableModel>>(url, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-        return res ?? new List<TableModel>();
+        try
+        {
+            var resp = await _http.GetAsync(url).ConfigureAwait(false);
+            if (!resp.IsSuccessStatusCode) return new List<TableModel>();
+            var res = await resp.Content.ReadFromJsonAsync<List<TableModel>>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            return res ?? new List<TableModel>();
+        }
+        catch
+        {
+            return new List<TableModel>();
+        }
     }
 
     public async Task<HttpResponseMessage> OpenTableAsync(Guid tableId, Guid waiterId)

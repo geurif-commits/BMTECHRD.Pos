@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using BMTECHRD.Pos.App.Core;
+using Microsoft.Extensions.DependencyInjection;
 using BMTECHRD.Pos.App.Models;
 using BMTECHRD.Pos.App.Services;
 
@@ -14,6 +15,33 @@ namespace BMTECHRD.Pos.App
         private DeviceMode _deviceMode;
         private readonly LocalDeviceConfigService _configService;
         private AuthSessionService? _authSession;
+        private Services.SignalRClient? _signalR;
+
+        private void OnSessionExpired(object? sender, EventArgs e)
+        {
+            // Ensure UI updates happen on UI thread
+            System.Windows.Application.Current?.Dispatcher.Invoke(async () =>
+            {
+                try
+                {
+                    if (_signalR != null)
+                    {
+                        await _signalR.DisconnectAsync();
+                        _signalR = null;
+                    }
+                }
+                catch
+                {
+                    // ignore
+                }
+
+                // Navigate back to StartView
+                var api = App.Services.GetService<Services.ApiClient>();
+                var start = new Views.StartView();
+                start.Initialize(api!, _authSession!);
+                Content = start;
+            });
+        }
 
         public MainWindow()
         {
@@ -47,28 +75,26 @@ namespace BMTECHRD.Pos.App
 
             _deviceMode = config.Mode;
 
-            // ✅ ETAPA 9: sesión con DeviceId persistente
-            _authSession = new AuthSessionService();
+            // ✅ ETAPA 9: sesión con DeviceId persistente (obtenida desde DI)
+            _authSession = (AuthSessionService?)App.Services.GetService(typeof(AuthSessionService));
+            if (_authSession == null)
+            {
+                MessageBox.Show("Error inicializando la sesión de autenticación. Reinicia la aplicación.", "Error DI", MessageBoxButton.OK, MessageBoxImage.Error);
+                Close();
+                return;
+            }
 
             // Base URL: si tu config tiene ApiBaseUrl úsalo, si no localhost
             var baseUrl = GetBaseUrlFromConfigOrDefault(config);
 
-            // ✅ Un solo handler + un solo HttpClient
-            var authHandler = new AuthHeaderHandler(_authSession)
+            // Obtener ApiClient (typed client) desde DI - HttpClientFactory maneja handlers
+            var api = (Services.ApiClient?)App.Services.GetService(typeof(Services.ApiClient));
+            if (api == null)
             {
-                InnerHandler = new HttpClientHandler()
-            };
-
-            var http = new HttpClient(authHandler)
-            {
-                BaseAddress = new Uri(baseUrl),
-                Timeout = TimeSpan.FromSeconds(30)
-            };
-
-            var api = new Services.ApiClient(http);
-
-            // ✅ Resolver ciclo: ahora el handler ya conoce el ApiClient real
-            authHandler.SetApiClient(api);
+                MessageBox.Show("Error inicializando el cliente API. Revisa la configuración y reinicia.", "Error DI", MessageBoxButton.OK, MessageBoxImage.Error);
+                Close();
+                return;
+            }
 
             // Start view (business selection + login)
             var start = new Views.StartView();
@@ -86,22 +112,42 @@ namespace BMTECHRD.Pos.App
                     session.Role,
                     session.ExpiresAt);
 
+                // Subscribe to session expired to cleanup SignalR and navigate back to StartView
+                _authSession.SessionExpired -= OnSessionExpired;
+                _authSession.SessionExpired += OnSessionExpired;
+
                 // SignalR client (usa access token actual)
-                var signalR = new Services.SignalRClient(baseUrl, () => Task.FromResult(_authSession!.AccessToken));
-                signalR.ConnectAsync().GetAwaiter().GetResult();
-                signalR.JoinBusinessAsync(session.BusinessId).GetAwaiter().GetResult();
+                _signalR = new Services.SignalRClient(baseUrl, () => Task.FromResult(_authSession!.AccessToken));
 
-                // Validar rol por device mode
-                if (!ValidateRoleForDeviceMode(session.Role))
+                // Connect and join business asynchronously so we don't block UI thread
+                Task.Run(async () =>
                 {
-                    var accessDenied = new Views.AccessDeniedView();
-                    accessDenied.Initialize(signalR, session.BusinessId);
-                    Content = accessDenied;
-                    return;
-                }
+                    try
+                    {
+                        await _signalR.ConnectAsync();
+                        await _signalR.JoinBusinessAsync(session.BusinessId);
+                    }
+                    catch
+                    {
+                        // ignore connect errors for now
+                    }
 
-                // Cargar vista según device mode
-                LoadViewForDeviceMode(api, signalR, session);
+                    // Update UI on dispatcher
+                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        // Validar rol por device mode
+                        if (!ValidateRoleForDeviceMode(session.Role))
+                        {
+                            var accessDenied = new Views.AccessDeniedView();
+                            accessDenied.Initialize(_signalR, session.BusinessId);
+                            Content = accessDenied;
+                            return;
+                        }
+
+                        // Cargar vista según device mode
+                        LoadViewForDeviceMode(api, _signalR, session);
+                    });
+                });
             };
 
             Content = start;

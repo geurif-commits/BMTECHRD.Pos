@@ -121,7 +121,18 @@ public sealed class AuthSessionService
             _role = null;
             _expiresAt = DateTime.MinValue;
         }
+        // Notificar que la sesión expiró/limpió
+        try
+        {
+            SessionExpired?.Invoke(this, EventArgs.Empty);
+        }
+        catch
+        {
+            // ignore
+        }
     }
+
+    public event EventHandler? SessionExpired;
 
     // ------------------------------
     // DeviceId persistence
@@ -129,12 +140,7 @@ public sealed class AuthSessionService
 
     private static string GetDeviceIdFilePath()
     {
-        // Roaming AppData (no requiere admin y es estable por usuario Windows)
-        var baseDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "BMTECHRD",
-            "POS");
-
+        var baseDir = BMTECHRD.Pos.App.Core.AppPaths.Root;
         Directory.CreateDirectory(baseDir);
         return Path.Combine(baseDir, "device.id");
     }

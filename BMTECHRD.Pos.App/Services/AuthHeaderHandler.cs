@@ -1,5 +1,7 @@
 using System;
 using System.IO;
+using Microsoft.Extensions.Logging;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -23,28 +25,30 @@ public sealed class AuthHeaderHandler : DelegatingHandler
     private static readonly HttpRequestOptionsKey<bool> _retriedKey = new("BMTECHRD.AuthHeaderHandler.Retried");
 
     private readonly AuthSessionService _session;
+    private readonly AuthClient _authClient;
+    private readonly Microsoft.Extensions.Logging.ILogger<AuthHeaderHandler> _logger;
 
-    // Se setea después de construir HttpClient+ApiClient
-    private ApiClient? _apiClient;
-
-    public AuthHeaderHandler(AuthSessionService session)
+    public AuthHeaderHandler(AuthSessionService session, AuthClient authClient, Microsoft.Extensions.Logging.ILogger<AuthHeaderHandler> logger)
     {
         ArgumentNullException.ThrowIfNull(session);
+        ArgumentNullException.ThrowIfNull(authClient);
+        ArgumentNullException.ThrowIfNull(logger);
         _session = session;
-    }
-
-    /// <summary>
-    /// Se llama una vez luego de crear ApiClient.
-    /// </summary>
-    public void SetApiClient(ApiClient apiClient)
-    {
-        ArgumentNullException.ThrowIfNull(apiClient);
-        _apiClient = apiClient;
+        _authClient = authClient;
+        _logger = logger;
     }
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+
+        using var _scope = _logger.BeginScope(new Dictionary<string, object>
+        {
+            ["Area"] = "Auth",
+            ["Path"] = request.RequestUri?.AbsolutePath ?? "(null)"
+        });
+
+        _logger.LogInformation("Start processing {Method} {Path}", request.Method, request.RequestUri?.AbsolutePath);
 
         AttachBearerIfNeeded(request);
 
@@ -66,10 +70,6 @@ public sealed class AuthHeaderHandler : DelegatingHandler
         if (request.Options.TryGetValue(_retriedKey, out var alreadyRetried) && alreadyRetried)
             return response;
 
-        // si todavía no se seteo ApiClient, no podemos refrescar
-        if (_apiClient is null)
-            return response;
-
         var tokenBefore = _session.AccessToken;
 
         await _refreshLock.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -89,15 +89,27 @@ public sealed class AuthHeaderHandler : DelegatingHandler
                     return response;
                 }
 
-                // ✅ ETAPA 9: enviar DeviceId en refresh
-                var refreshed = await _apiClient
-                    .RefreshTokenAsync(refreshToken, _session.DeviceId, cancellationToken)
+                // ✅ ETAPA 9: enviar DeviceId en refresh (usando AuthClient para evitar recursion)
+                _logger.LogInformation("401 detected. Attempting refresh for device {DeviceId}.", _session.DeviceId);
+
+                var refreshed = await _authClient
+                    .RefreshAsync(new BMTECHRD.Pos.Application.DTOs.RefreshTokenRequest { RefreshToken = refreshToken, DeviceId = _session.DeviceId }, cancellationToken)
                     .ConfigureAwait(false);
+
+                if (refreshed != null)
+                {
+                    _logger.LogInformation("Refresh successful");
+                }
+                else
+                {
+                    _logger.LogWarning("Refresh failed or returned null");
+                }
 
                 if (refreshed == null ||
                     string.IsNullOrWhiteSpace(refreshed.AccessToken) ||
                     string.IsNullOrWhiteSpace(refreshed.RefreshToken))
                 {
+                    _logger.LogWarning("Refresh failed - clearing session");
                     _session.Clear();
                     return response;
                 }
@@ -169,5 +181,21 @@ public sealed class AuthHeaderHandler : DelegatingHandler
         }
 
         return clone;
+    }
+
+    private void Log(string message)
+    {
+        try
+        {
+            var logDir = BMTECHRD.Pos.App.Core.AppPaths.LogsFolder;
+            System.IO.Directory.CreateDirectory(logDir);
+            var path = System.IO.Path.Combine(logDir, "auth.log");
+            var line = $"[{DateTime.UtcNow:O}] {message}" + Environment.NewLine;
+            System.IO.File.AppendAllText(path, line);
+        }
+        catch
+        {
+            // ignore logging failures
+        }
     }
 }

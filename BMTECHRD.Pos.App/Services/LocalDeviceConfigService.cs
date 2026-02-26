@@ -17,8 +17,7 @@ public sealed class LocalDeviceConfigService
 
     public LocalDeviceConfigService()
     {
-        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        _configFolder = Path.Combine(appData, "BMTECHRD.POS");
+        _configFolder = Path.Combine(BMTECHRD.Pos.App.Core.AppPaths.Root);
         Directory.CreateDirectory(_configFolder);
         _configPath = Path.Combine(_configFolder, "device.config.json");
     }
