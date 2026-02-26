@@ -29,7 +29,8 @@ public sealed class AuthHeaderHandler : DelegatingHandler
 
     public AuthHeaderHandler(AuthSessionService session)
     {
-        _session = session ?? throw new ArgumentNullException(nameof(session));
+        ArgumentNullException.ThrowIfNull(session);
+        _session = session;
     }
 
     /// <summary>
@@ -37,12 +38,13 @@ public sealed class AuthHeaderHandler : DelegatingHandler
     /// </summary>
     public void SetApiClient(ApiClient apiClient)
     {
-        _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
+        ArgumentNullException.ThrowIfNull(apiClient);
+        _apiClient = apiClient;
     }
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        if (request is null) throw new ArgumentNullException(nameof(request));
+        ArgumentNullException.ThrowIfNull(request);
 
         AttachBearerIfNeeded(request);
 
@@ -80,7 +82,8 @@ public sealed class AuthHeaderHandler : DelegatingHandler
             }
             else
             {
-                if (string.IsNullOrWhiteSpace(_session.RefreshToken))
+                var refreshToken = _session.RefreshToken;
+                if (string.IsNullOrWhiteSpace(refreshToken))
                 {
                     _session.Clear();
                     return response;
@@ -88,7 +91,7 @@ public sealed class AuthHeaderHandler : DelegatingHandler
 
                 // ✅ ETAPA 9: enviar DeviceId en refresh
                 var refreshed = await _apiClient
-                    .RefreshTokenAsync(_session.RefreshToken!, _session.DeviceId)
+                    .RefreshTokenAsync(refreshToken, _session.DeviceId, cancellationToken)
                     .ConfigureAwait(false);
 
                 if (refreshed == null ||

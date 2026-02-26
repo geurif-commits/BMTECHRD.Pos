@@ -9,6 +9,7 @@ namespace BMTECHRD.Pos.App.ViewModels;
 public sealed class StartViewModel : ViewModelBase
 {
     private readonly ApiClient _api;
+    private readonly AuthSessionService _session;
 
     public ObservableCollection<BusinessPublicModel> Businesses { get; } = new();
 
@@ -23,9 +24,10 @@ public sealed class StartViewModel : ViewModelBase
 
     public event System.Action<SessionModel>? OnLoginSuccess;
 
-    public StartViewModel(ApiClient api)
+    public StartViewModel(ApiClient api, AuthSessionService session)
     {
         _api = api;
+        _session = session ?? throw new System.ArgumentNullException(nameof(session));
         LoadBusinessesCommand = new RelayCommand(async _ => await LoadAsync());
         LoginCommand = new RelayCommand(async _ => await LoginAsync());
     }
@@ -55,7 +57,8 @@ public sealed class StartViewModel : ViewModelBase
             {
                 BusinessId = SelectedBusiness.BusinessId,
                 Username = Username,
-                Password = Password
+                Password = Password,
+                DeviceId = _session.DeviceId // ETAPA 9: enviar DeviceId en login
             };
             var resp = await _api.LoginAsync(req);
             if (resp == null) { Error = "Invalid credentials"; return; }

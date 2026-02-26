@@ -16,9 +16,9 @@ public partial class StartView : UserControl
         InitializeComponent();
     }
 
-    public void Initialize(ApiClient api)
+    public void Initialize(ApiClient api, AuthSessionService session)
     {
-        _vm = new StartViewModel(api);
+        _vm = new StartViewModel(api, session);
         DataContext = _vm;
         _vm.OnLoginSuccess += s => OnLoginSuccess?.Invoke(s);
 

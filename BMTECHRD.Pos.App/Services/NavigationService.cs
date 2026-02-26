@@ -8,14 +8,8 @@ using System.Windows.Controls;
 
 namespace BMTECHRD.Pos.App.Services;
 
-public sealed class NavigationService : INavigationService
+public sealed class NavigationService(IServiceProvider _sp) : INavigationService
 {
-    private readonly IServiceProvider _sp;
-
-    public NavigationService(IServiceProvider sp)
-    {
-        _sp = sp;
-    }
 
     public Task GoToLoginAsync()
     {
@@ -43,13 +37,13 @@ public sealed class NavigationService : INavigationService
 
     private static void SetMainContent(object content)
     {
-        if (Application.Current.MainWindow is MainWindow mw)
+        if (System.Windows.Application.Current?.MainWindow is MainWindow mw)
         {
             mw.SetContent(content);
         }
-        else if (Application.Current.MainWindow != null)
+        else if (System.Windows.Application.Current?.MainWindow != null)
         {
-            Application.Current.MainWindow.Content = content;
+            System.Windows.Application.Current.MainWindow.Content = content;
         }
     }
 }

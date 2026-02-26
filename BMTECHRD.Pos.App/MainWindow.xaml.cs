@@ -21,6 +21,19 @@ namespace BMTECHRD.Pos.App
             _configService = new LocalDeviceConfigService();
         }
 
+        public void SetContent(object content)
+        {
+            // Simple wrapper to set the named ContentControl in XAML
+            if (content is UIElement el)
+            {
+                MainContent.Content = el;
+            }
+            else
+            {
+                MainContent.Content = content;
+            }
+        }
+
         protected override void OnContentRendered(EventArgs e)
         {
             base.OnContentRendered(e);
@@ -59,7 +72,7 @@ namespace BMTECHRD.Pos.App
 
             // Start view (business selection + login)
             var start = new Views.StartView();
-            start.Initialize(api);
+            start.Initialize(api, _authSession);
 
             start.OnLoginSuccess += session =>
             {
@@ -94,7 +107,7 @@ namespace BMTECHRD.Pos.App
             Content = start;
         }
 
-        private static string GetBaseUrlFromConfigOrDefault(LocalDeviceConfig config)
+        private static string GetBaseUrlFromConfigOrDefault(DeviceConfig config)
         {
             // Si tu LocalDeviceConfig tiene otra propiedad, cámbiala aquí (ApiBaseUrl/BaseUrl/ServerUrl).
             // Si NO existe, cae a localhost.
@@ -104,7 +117,7 @@ namespace BMTECHRD.Pos.App
                    ?? "https://localhost:5001/";
 
             url = url.Trim();
-            if (!url.EndsWith("/")) url += "/";
+            if (!url.EndsWith('/')) url += "/";
             return url;
         }
 
