@@ -71,3 +71,7 @@ dotnet ef migrations add NombreMigracion --project BMTECHRD.Pos.Infrastructure -
 
 - `docs/runbooks/LOCAL_DEV.md`
 - `docs/runbooks/INCIDENT_RESPONSE.md`
+
+## Bitácora técnica
+
+- `docs/PROJECT_BITACORA_SENIOR_READY.md`

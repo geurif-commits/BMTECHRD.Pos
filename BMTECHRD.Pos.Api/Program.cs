@@ -1,5 +1,7 @@
 using BMTECHRD.Pos.Api.Services.Orders;
 using BMTECHRD.Pos.Api.Services.Reports;
+using BMTECHRD.Pos.Api.Services.Inventory;
+using BMTECHRD.Pos.Api.Services.Shifts;
 using BMTECHRD.Pos.Api.Hubs;
 using BMTECHRD.Pos.Api.Extensions;
 using BMTECHRD.Pos.Infrastructure;
@@ -15,6 +17,8 @@ builder.Services.AddControllers();
 builder.Services.AddSignalR();
 builder.Services.AddScoped<IOrderBatchService, OrderBatchService>();
 builder.Services.AddScoped<IReportsService, ReportsService>();
+builder.Services.AddScoped<IShiftService, ShiftService>();
+builder.Services.AddScoped<IInventoryService, InventoryService>();
 
 // Infrastructure (DbContext, Auth services)
 builder.Services.AddInfrastructure(builder.Configuration);

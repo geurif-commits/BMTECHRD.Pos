@@ -3,22 +3,25 @@
 ## 1) Arquitectura de casos de uso
 - [x] Extraer caso de uso de creación de órdenes por lote a servicio dedicado (`OrderBatchService`).
 - [x] Extraer reportes a servicio dedicado (`ReportsService`).
-- [ ] Extraer pagos, turnos e inventario a casos de uso dedicados.
+- [x] Extraer turnos a servicio dedicado (`ShiftService`).
+- [x] Extraer inventario a servicio dedicado (`InventoryService`).
+- [ ] Extraer pagos/caja y administración restante a casos de uso dedicados.
 
 ## 2) Error handling estándar
 - [x] Middleware global en formato `ProblemDetails`.
-- [x] Códigos de error de negocio iniciales para órdenes y reportes.
+- [x] Códigos de error de negocio iniciales para órdenes, reportes, turnos e inventario.
 - [x] Helper de claims (`bid`/`sub`) con errores consistentes (`ApiProblemException`).
 - [ ] Unificar todos los controladores restantes al mismo contrato de error.
 
 ## 3) Pruebas
 - [x] Tests de auth flow existentes.
-- [x] Nuevos unit tests de servicios (`OrderBatchService`, `ReportsService`).
+- [x] Nuevos unit tests de servicios (`OrderBatchService`, `ReportsService`, `ShiftService`, `InventoryService`).
 - [ ] Integration tests API+DB para endpoints críticos.
 
 ## 4) Documentación operativa
 - [x] README base con setup/build/run/test.
 - [x] Runbooks operativos (`LOCAL_DEV`, `INCIDENT_RESPONSE`).
+- [x] Bitácora integral del proyecto (`PROJECT_BITACORA_SENIOR_READY`).
 
 ## 5) Cliente WPF
 - [x] Extraída política de roles por modo de dispositivo (`DeviceRolePolicy`) fuera de `MainWindow`.
