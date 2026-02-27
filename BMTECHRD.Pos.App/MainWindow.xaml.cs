@@ -17,7 +17,7 @@ namespace BMTECHRD.Pos.App
         private readonly IDeviceRolePolicy _deviceRolePolicy;
         private readonly IMainWindowSessionOrchestrator _sessionOrchestrator;
         private readonly IMainWindowNavigationCoordinator _navigationCoordinator;
-        private AuthSessionService? _authSession;
+        private BMTECHRD.Pos.Auth.Core.Services.AuthSessionService? _authSession;
         private SignalRClient? _signalR;
         private string _baseUrl = "https://localhost:5001/";
 
@@ -37,7 +37,7 @@ namespace BMTECHRD.Pos.App
                 {
                 }
 
-                var api = App.Services.GetService<ApiClient>();
+                var api = App.Services.GetService<BMTECHRD.Pos.App.Services.ApiClient>();
                 if (api == null || _authSession == null) return;
                 Content = _navigationCoordinator.BuildStartContent(api, _authSession, OnLoginSuccess);
             });
@@ -73,7 +73,7 @@ namespace BMTECHRD.Pos.App
 
             _deviceMode = config.Mode;
 
-            _authSession = (AuthSessionService?)App.Services.GetService(typeof(AuthSessionService));
+            _authSession = (BMTECHRD.Pos.Auth.Core.Services.AuthSessionService?)App.Services.GetService(typeof(BMTECHRD.Pos.Auth.Core.Services.AuthSessionService));
             if (_authSession == null)
             {
                 MessageBox.Show("Error inicializando la sesión de autenticación. Reinicia la aplicación.", "Error DI", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -82,7 +82,7 @@ namespace BMTECHRD.Pos.App
             }
 
             _baseUrl = GetBaseUrlFromConfigOrDefault(config);
-            var api = (ApiClient?)App.Services.GetService(typeof(ApiClient));
+            var api = (BMTECHRD.Pos.App.Services.ApiClient?)App.Services.GetService(typeof(BMTECHRD.Pos.App.Services.ApiClient));
             if (api == null)
             {
                 MessageBox.Show("Error inicializando el cliente API. Revisa la configuración y reinicia.", "Error DI", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -101,7 +101,7 @@ namespace BMTECHRD.Pos.App
             _authSession.SessionExpired -= OnSessionExpired;
             _authSession.SessionExpired += OnSessionExpired;
 
-            var api = (ApiClient?)App.Services.GetService(typeof(ApiClient));
+            var api = (BMTECHRD.Pos.App.Services.ApiClient?)App.Services.GetService(typeof(BMTECHRD.Pos.App.Services.ApiClient));
             if (api == null) return;
 
             Task.Run(async () =>

@@ -11,9 +11,9 @@ namespace BMTECHRD.Pos.App.ViewModels.Auth;
 
 public sealed class LoginViewModel : INotifyPropertyChanged
 {
-    private readonly ApiClient _api;
-    private readonly AuthSessionService _session;
-    private readonly INavigationService _nav;
+    private readonly BMTECHRD.Pos.App.Services.ApiClient _api;
+    private readonly BMTECHRD.Pos.Auth.Core.Services.AuthSessionService _session;
+    private readonly BMTECHRD.Pos.App.Services.INavigationService _nav;
 
     private string _businessIdText = string.Empty;
     private string _username = string.Empty;
@@ -25,7 +25,7 @@ public sealed class LoginViewModel : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public LoginViewModel(ApiClient api, AuthSessionService session, INavigationService nav)
+    public LoginViewModel(BMTECHRD.Pos.App.Services.ApiClient api, BMTECHRD.Pos.Auth.Core.Services.AuthSessionService session, BMTECHRD.Pos.App.Services.INavigationService nav)
     {
         _api = api;
         _session = session;

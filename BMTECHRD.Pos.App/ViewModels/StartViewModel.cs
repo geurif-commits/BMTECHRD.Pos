@@ -9,8 +9,8 @@ namespace BMTECHRD.Pos.App.ViewModels;
 
 public sealed class StartViewModel : ViewModelBase
 {
-    private readonly ApiClient _api;
-    private readonly AuthSessionService _session;
+    private readonly BMTECHRD.Pos.App.Services.ApiClient _api;
+    private readonly BMTECHRD.Pos.Auth.Core.Services.AuthSessionService _session;
 
     public ObservableCollection<BusinessPublicModel> Businesses { get; } = new();
 
@@ -25,7 +25,7 @@ public sealed class StartViewModel : ViewModelBase
 
     public event System.Action<SessionModel>? OnLoginSuccess;
 
-    public StartViewModel(ApiClient api, AuthSessionService session)
+    public StartViewModel(BMTECHRD.Pos.App.Services.ApiClient api, BMTECHRD.Pos.Auth.Core.Services.AuthSessionService session)
     {
         _api = api;
         _session = session ?? throw new System.ArgumentNullException(nameof(session));

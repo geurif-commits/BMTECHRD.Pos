@@ -17,7 +17,7 @@ public partial class StartView : UserControl
         InitializeComponent();
     }
 
-    public void Initialize(ApiClient api, AuthSessionService session)
+    public void Initialize(BMTECHRD.Pos.App.Services.ApiClient api, BMTECHRD.Pos.Auth.Core.Services.AuthSessionService session)
     {
         _vm = new StartViewModel(api, session);
         DataContext = _vm;
