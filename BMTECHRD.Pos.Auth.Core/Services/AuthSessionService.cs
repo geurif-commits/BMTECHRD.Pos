@@ -1,14 +1,8 @@
 using System;
 using System.IO;
 
-namespace BMTECHRD.Pos.App.Services;
+namespace BMTECHRD.Pos.Auth.Core.Services;
 
-/// <summary>
-/// Mantiene la sesión de autenticación del usuario actual (tokens, datos).
-/// ETAPA 9 HARDENED:
-/// - DeviceId persistente por equipo (para Device Binding en refresh token).
-/// - Almacenamiento en memoria (tokens) + DeviceId persistido en disco.
-/// </summary>
 public sealed class AuthSessionService
 {
     private string? _accessToken;
@@ -39,27 +33,12 @@ public sealed class AuthSessionService
     public string? Role => _role;
     public DateTime ExpiresAt => _expiresAt;
 
-    /// <summary>
-    /// Identificador único del dispositivo (persistente).
-    /// Se envía en login y refresh para habilitar Device Binding.
-    /// </summary>
     public string DeviceId => _deviceId;
 
-    /// <summary>
-    /// Indica si el usuario está autenticado actualmente.
-    /// </summary>
     public bool IsAuthenticated => !string.IsNullOrWhiteSpace(_accessToken) && _userId != Guid.Empty;
 
-    /// <summary>
-    /// Indica si el access token está próximo a expirar.
-    /// Nota: para seguridad real, ExpiresAt debe venir del access token o del backend.
-    /// Aquí se mantiene tu comportamiento actual.
-    /// </summary>
     public bool IsAccessTokenExpiring => DateTime.UtcNow.AddMinutes(5) >= _expiresAt;
 
-    /// <summary>
-    /// Establece la sesión con los datos de login.
-    /// </summary>
     public void SetSession(
         string accessToken,
         string refreshToken,
@@ -81,9 +60,6 @@ public sealed class AuthSessionService
         }
     }
 
-    /// <summary>
-    /// Actualiza el access token.
-    /// </summary>
     public void UpdateAccessToken(string newAccessToken, DateTime newExpiresAt)
     {
         lock (_lockObj)
@@ -93,9 +69,6 @@ public sealed class AuthSessionService
         }
     }
 
-    /// <summary>
-    /// Actualiza ambos tokens (refresh token rotation).
-    /// </summary>
     public void UpdateTokens(string newAccessToken, string newRefreshToken, DateTime newExpiresAt)
     {
         lock (_lockObj)
@@ -106,13 +79,15 @@ public sealed class AuthSessionService
         }
     }
 
-    /// <summary>
-    /// Limpia la sesión (logout). Mantiene DeviceId (por diseño).
-    /// </summary>
     public void Clear()
     {
         lock (_lockObj)
         {
+            if (string.IsNullOrWhiteSpace(_accessToken) && _userId == Guid.Empty)
+            {
+                return;
+            }
+
             _accessToken = null;
             _refreshToken = null;
             _userId = Guid.Empty;
@@ -121,7 +96,7 @@ public sealed class AuthSessionService
             _role = null;
             _expiresAt = DateTime.MinValue;
         }
-        // Notificar que la sesión expiró/limpió
+
         try
         {
             SessionExpired?.Invoke(this, EventArgs.Empty);
@@ -134,13 +109,9 @@ public sealed class AuthSessionService
 
     public event EventHandler? SessionExpired;
 
-    // ------------------------------
-    // DeviceId persistence
-    // ------------------------------
-
     private static string GetDeviceIdFilePath()
     {
-        var baseDir = BMTECHRD.Pos.App.Core.AppPaths.Root;
+        var baseDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "BMTECHRD", "POS");
         Directory.CreateDirectory(baseDir);
         return Path.Combine(baseDir, "device.id");
     }
@@ -158,17 +129,15 @@ public sealed class AuthSessionService
         }
         catch
         {
-            // si falla lectura, generamos nuevo
         }
 
-        var newId = Guid.NewGuid().ToString("N"); // 32 chars
+        var newId = Guid.NewGuid().ToString("N");
         try
         {
             File.WriteAllText(filePath, newId);
         }
         catch
         {
-            // si falla escritura, igual devolvemos el id en memoria
         }
 
         return newId;

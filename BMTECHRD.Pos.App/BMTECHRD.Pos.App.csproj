@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\BMTECHRD.Pos.Application\BMTECHRD.Pos.Application.csproj" />
+    <ProjectReference Include="..\BMTECHRD.Pos.Auth.Core\BMTECHRD.Pos.Auth.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

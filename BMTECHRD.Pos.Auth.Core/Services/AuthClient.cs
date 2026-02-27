@@ -1,13 +1,15 @@
+using System;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using BMTECHRD.Pos.Application.DTOs;
 using Microsoft.Extensions.Logging;
+using BMTECHRD.Pos.Auth.Core.Interfaces;
 
-namespace BMTECHRD.Pos.App.Services;
+namespace BMTECHRD.Pos.Auth.Core.Services;
 
-public sealed class AuthClient
+public sealed class AuthClient : IAuthClient
 {
     private readonly HttpClient _http;
     private readonly ILogger<AuthClient> _logger;

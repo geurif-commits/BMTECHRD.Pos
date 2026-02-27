@@ -1,34 +1,25 @@
 using System;
 using System.IO;
 using Microsoft.Extensions.Logging;
-using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
+using BMTECHRD.Pos.Auth.Core.Interfaces;
 
-namespace BMTECHRD.Pos.App.Services;
+namespace BMTECHRD.Pos.Auth.Core.Services;
 
-/// <summary>
-/// DelegatingHandler que inyecta JWT access token en cada request y maneja auto-refresh en 401.
-/// ETAPA 9 (HARDENED):
-/// - Evita loops (excluye login/refresh/logout)
-/// - Control de concurrencia (1 refresh a la vez)
-/// - Reintento seguro (clona HttpRequestMessage para POST/PUT con body)
-/// - DeviceId enviado en refresh para Device Binding
-/// - Resuelve ciclo ApiClient <-> HttpClient usando SetApiClient(...)
-/// </summary>
 public sealed class AuthHeaderHandler : DelegatingHandler
 {
     private static readonly SemaphoreSlim _refreshLock = new(1, 1);
     private static readonly HttpRequestOptionsKey<bool> _retriedKey = new("BMTECHRD.AuthHeaderHandler.Retried");
 
     private readonly AuthSessionService _session;
-    private readonly AuthClient _authClient;
+    private readonly IAuthClient _authClient;
     private readonly Microsoft.Extensions.Logging.ILogger<AuthHeaderHandler> _logger;
 
-    public AuthHeaderHandler(AuthSessionService session, AuthClient authClient, Microsoft.Extensions.Logging.ILogger<AuthHeaderHandler> logger)
+    public AuthHeaderHandler(AuthSessionService session, IAuthClient authClient, Microsoft.Extensions.Logging.ILogger<AuthHeaderHandler> logger)
     {
         ArgumentNullException.ThrowIfNull(session);
         ArgumentNullException.ThrowIfNull(authClient);
@@ -42,7 +33,7 @@ public sealed class AuthHeaderHandler : DelegatingHandler
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        using var _scope = _logger.BeginScope(new Dictionary<string, object>
+        using var _scope = _logger.BeginScope(new System.Collections.Generic.Dictionary<string, object>
         {
             ["Area"] = "Auth",
             ["Path"] = request.RequestUri?.AbsolutePath ?? "(null)"
@@ -66,7 +57,6 @@ public sealed class AuthHeaderHandler : DelegatingHandler
             return response;
         }
 
-        // evita loop infinito
         if (request.Options.TryGetValue(_retriedKey, out var alreadyRetried) && alreadyRetried)
             return response;
 
@@ -75,10 +65,9 @@ public sealed class AuthHeaderHandler : DelegatingHandler
         await _refreshLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            // si otro request ya refrescó mientras esperábamos
             if (!string.IsNullOrWhiteSpace(_session.AccessToken) && _session.AccessToken != tokenBefore)
             {
-                // ya refrescado por otro thread
+                // already refreshed
             }
             else
             {
@@ -89,7 +78,6 @@ public sealed class AuthHeaderHandler : DelegatingHandler
                     return response;
                 }
 
-                // ✅ ETAPA 9: enviar DeviceId en refresh (usando AuthClient para evitar recursion)
                 _logger.LogInformation("401 detected. Attempting refresh for device {DeviceId}.", _session.DeviceId);
 
                 var refreshed = await _authClient
@@ -181,21 +169,5 @@ public sealed class AuthHeaderHandler : DelegatingHandler
         }
 
         return clone;
-    }
-
-    private void Log(string message)
-    {
-        try
-        {
-            var logDir = BMTECHRD.Pos.App.Core.AppPaths.LogsFolder;
-            System.IO.Directory.CreateDirectory(logDir);
-            var path = System.IO.Path.Combine(logDir, "auth.log");
-            var line = $"[{DateTime.UtcNow:O}] {message}" + Environment.NewLine;
-            System.IO.File.AppendAllText(path, line);
-        }
-        catch
-        {
-            // ignore logging failures
-        }
     }
 }

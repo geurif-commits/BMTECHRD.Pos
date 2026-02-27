@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Serilog;
 using BMTECHRD.Pos.App.Core;
 using BMTECHRD.Pos.App.Services;
+using BMTECHRD.Pos.AuthHarness.Shared;
 using BMTECHRD.Pos.Application.DTOs;
 
 Console.WriteLine("BMTECHRD.Pos.AuthHarness - starting");
@@ -178,7 +179,7 @@ async Task<ScenarioResult> Scenario_RefreshOk(ServiceProvider sp, Microsoft.Exte
     return result;
 }
 
-async Task Scenario_RefreshFail(ServiceProvider sp, Microsoft.Extensions.Logging.ILogger logger)
+async Task<ScenarioResult> Scenario_RefreshFail(ServiceProvider sp, Microsoft.Extensions.Logging.ILogger logger)
 {
     Console.WriteLine("\n=== Scenario 2: Refresh FAIL ===");
     var sim = new HarnessSimState();
@@ -227,7 +228,7 @@ async Task Scenario_RefreshFail(ServiceProvider sp, Microsoft.Extensions.Logging
     return result;
 }
 
-async Task Scenario_Concurrency(ServiceProvider sp, Microsoft.Extensions.Logging.ILogger logger)
+async Task<ScenarioResult> Scenario_Concurrency(ServiceProvider sp, Microsoft.Extensions.Logging.ILogger logger)
 {
     Console.WriteLine("\n=== Scenario 3: Concurrency ===");
     var sim = new HarnessSimState();
@@ -402,103 +403,4 @@ public enum RefreshFailureMode
     ReuseDetected403 = 2
 }
 
-class HarnessSimState
-{
-    public RefreshFailureMode RefreshFailMode { get; set; } = RefreshFailureMode.None;
-    public bool RotateRefreshTokenOnSuccess { get; set; } = true;
-    public int RefreshAttempts { get; set; }
-    public bool TokenUpdated { get; set; }
-
-    public void Reset()
-    {
-        RefreshFailMode = RefreshFailureMode.None;
-        RotateRefreshTokenOnSuccess = true;
-        RefreshAttempts = 0;
-        TokenUpdated = false;
-    }
-}
-
-class FakeAuthHandler : HttpMessageHandler
-{
-    private readonly HarnessSimState _state;
-    public FakeAuthHandler(HarnessSimState state) => _state = state;
-
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, System.Threading.CancellationToken cancellationToken)
-    {
-        if (request.RequestUri?.AbsolutePath?.Contains("/api/auth/refresh") == true)
-        {
-            _state.RefreshAttempts++;
-
-            // read refresh token from body
-            var body = request.Content?.ReadAsStringAsync(cancellationToken).GetAwaiter().GetResult() ?? string.Empty;
-            string? refreshToken = null;
-            try
-            {
-                using var doc = JsonDocument.Parse(body);
-                if (doc.RootElement.TryGetProperty("refreshToken", out var rt))
-                    refreshToken = rt.GetString();
-            }
-            catch { }
-
-            // If refresh token is 'reused_refresh' simulate reuse detection
-            if (string.Equals(refreshToken, "reused_refresh", StringComparison.Ordinal))
-            {
-                if (_state.RefreshFailMode == RefreshFailureMode.ReuseDetected403)
-                {
-                    return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Forbidden) { Content = new StringContent("Refresh token reuse detected") });
-                }
-                else
-                {
-                    return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized) { Content = new StringContent("Invalid refresh") });
-                }
-            }
-
-            // Normal success case
-            if (string.Equals(refreshToken, "valid-refresh", StringComparison.Ordinal))
-            {
-                _state.TokenUpdated = true;
-                var newRefresh = _state.RotateRefreshTokenOnSuccess ? "valid_refresh_rotated" : "valid-refresh";
-                var resp = new LoginResponse
-                {
-                    AccessToken = "new-access",
-                    RefreshToken = newRefresh,
-                    UserId = Guid.NewGuid(),
-                    BusinessId = Guid.NewGuid(),
-                    Username = "harness",
-                    Role = "ADMIN",
-                    ExpiresAt = DateTime.UtcNow.AddMinutes(30)
-                };
-                var json = JsonSerializer.Serialize(resp);
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(json, Encoding.UTF8, "application/json") });
-            }
-
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized) { Content = new StringContent("Invalid refresh") });
-        }
-
-        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
-    }
-}
-
-class FakeApiHandler : HttpMessageHandler
-{
-    private readonly HarnessSimState _state;
-    public FakeApiHandler(HarnessSimState state) => _state = state;
-
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, System.Threading.CancellationToken cancellationToken)
-    {
-        if (request.RequestUri?.AbsolutePath?.Contains("/api/tables") == true)
-        {
-            if (!_state.TokenUpdated)
-            {
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized));
-            }
-            else
-            {
-                var json = JsonSerializer.Serialize(new object[0]);
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(json, Encoding.UTF8, "application/json") });
-            }
-        }
-
-        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
-    }
-}
+// Fake backend types moved to BMTECHRD.Pos.AuthHarness.Shared

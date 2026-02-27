@@ -74,7 +74,7 @@ public partial class App : System.Windows.Application
         var services = new ServiceCollection();
 
         // Session singleton (tokens + DeviceId persistente)
-        services.AddSingleton<AuthSessionService>();
+        services.AddSingleton<BMTECHRD.Pos.Auth.Core.Services.AuthSessionService>();
 
         // HttpClient: base URL desde config (si no está, usa localhost)
         var baseUrl = TryReadStringProperty(config, "ApiBaseUrl")
@@ -88,14 +88,14 @@ public partial class App : System.Windows.Application
         services.AddLogging(builder => builder.AddSerilog());
 
         // Auth client (no handlers) - used for login/refresh to avoid recursion
-        services.AddHttpClient<AuthClient>(c =>
+        services.AddHttpClient<BMTECHRD.Pos.Auth.Core.Interfaces.IAuthClient, BMTECHRD.Pos.Auth.Core.Services.AuthClient>(c =>
         {
             c.BaseAddress = new Uri(baseUrl);
             c.Timeout = TimeSpan.FromSeconds(30);
         });
 
         // Register AuthHeaderHandler so it can be used as a message handler
-        services.AddTransient<AuthHeaderHandler>();
+        services.AddTransient<BMTECHRD.Pos.Auth.Core.Services.AuthHeaderHandler>();
 
         // ApiClient typed client that uses AuthHeaderHandler to attach tokens and refresh
         services.AddHttpClient<ApiClient>(c =>
@@ -103,7 +103,10 @@ public partial class App : System.Windows.Application
             c.BaseAddress = new Uri(baseUrl);
             c.Timeout = TimeSpan.FromSeconds(60);
         })
-        .AddHttpMessageHandler<AuthHeaderHandler>();
+        .AddHttpMessageHandler<BMTECHRD.Pos.Auth.Core.Services.AuthHeaderHandler>();
+
+        // Expose IApiClient (core contract) using adapter to App ApiClient implementation
+        services.AddSingleton<BMTECHRD.Pos.Auth.Core.Interfaces.IApiClient>(sp => new BMTECHRD.Pos.App.Services.ApiClientAdapter(sp.GetRequiredService<ApiClient>()));
 
         // Navigation
         services.AddSingleton<INavigationService, NavigationService>();

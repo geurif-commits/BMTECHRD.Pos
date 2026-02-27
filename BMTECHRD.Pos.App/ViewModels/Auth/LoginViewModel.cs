@@ -1,4 +1,4 @@
-﻿using BMTECHRD.Pos.App.Services;
+﻿using BMTECHRD.Pos.Auth.Core.Services;
 using BMTECHRD.Pos.Application.DTOs;
 using System;
 using System.ComponentModel;

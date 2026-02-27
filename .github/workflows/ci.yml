@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build -c Release --no-restore
+
+      - name: Test (AuthHarness)
+        run: dotnet test BMTECHRD.Pos.AuthHarness.Tests/BMTECHRD.Pos.AuthHarness.Tests.csproj -c Release --no-build --logger "trx;LogFileName=authharness.trx"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            **/*.trx
+
+      - name: Upload auth logs (if any)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auth-logs
+          path: |
+            ${{ env.APPDATA }}\BMTECHRD\POS\logs\auth-*.log
