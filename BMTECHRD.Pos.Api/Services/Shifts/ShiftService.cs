@@ -27,19 +27,29 @@ public sealed class ShiftService : IShiftService
         _idempotencyKeyStore = idempotencyKeyStore;
     }
 
-    public async Task<ActiveShiftResponse> GetActiveAsync(Guid businessId, Guid userId, CancellationToken ct)
+    public async Task<ShiftStatusResponse> GetActiveAsync(Guid businessId, Guid userId, CancellationToken ct)
     {
         var shift = await _ctx.Shifts.AsNoTracking().FirstOrDefaultAsync(s => s.BusinessId == businessId && s.UserId == userId && s.Status == "OPEN", ct);
         if (shift == null)
-            return new ActiveShiftResponse { HasOpenShift = false };
+            return new ShiftStatusResponse { Status = "NONE" };
 
-        return new ActiveShiftResponse
+        var username = await _ctx.Users.AsNoTracking()
+            .Where(u => u.Id == shift.UserId)
+            .Select(u => u.Username)
+            .FirstOrDefaultAsync(ct);
+
+        return new ShiftStatusResponse
         {
-            HasOpenShift = true,
             ShiftId = shift.Id,
+            Status = "OPEN",
             OpenedAt = shift.OpenedAt,
+            OpenedByUsername = username,
             OpeningCash = shift.OpeningCash,
-            Notes = shift.Notes
+            SalesCash = 0m,
+            SalesCard = 0m,
+            SalesTransfer = 0m,
+            SalesMixed = 0m,
+            TotalPayments = 0m
         };
     }
 

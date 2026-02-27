@@ -108,6 +108,7 @@ Entregar un POS robusto y mantenible con:
 21. Preparación de baseline de análisis estático (analyzers + dotnet format + gates en CI).
 22. Formalización del cierre de ciclo senior-ready (`docs/CIERRE_CICLO_SENIOR_READY.md`).
 23. Ejecución de Análisis Estático Fase 1 (top 20, priorización por riesgo y lote A de correcciones).
+24. Corrección de bloqueantes de compilación detectados en CI (`ShiftService` contract mismatch).
 
 ---
 
