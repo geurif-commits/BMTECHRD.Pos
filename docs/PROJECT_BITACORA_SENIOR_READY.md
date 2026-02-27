@@ -31,7 +31,8 @@ Entregar un POS robusto y mantenible con:
 - Refactor de reportes a `ReportsService`.
 - Refactor de turnos a `ShiftService`.
 - Refactor de ajuste de inventario a `InventoryService`.
-- Controladores `Orders`, `Reports`, `Shifts`, `Inventory` quedaron más delgados y delegan en servicios.
+- Refactor de caja/pagos a `CashierService` con idempotencia básica por `Idempotency-Key`.
+- Controladores `Orders`, `Reports`, `Shifts`, `Inventory`, `Cashier` quedaron más delgados y delegan en servicios.
 
 **Error handling**
 - Excepción de negocio centralizada: `ApiProblemException`.
@@ -50,11 +51,13 @@ Entregar un POS robusto y mantenible con:
 
 ### 3.4 Pruebas
 - AuthHarness existente para refresh/reintentos/concurrencia.
-- Nuevo proyecto `BMTECHRD.Pos.Api.Tests` con tests de servicios:
+- Nuevo proyecto `BMTECHRD.Pos.Api.Tests` con tests de servicios e integración:
   - `OrderBatchServiceTests`
   - `ReportsServiceTests`
   - `InventoryServiceTests`
   - `ShiftServiceTests`
+  - `CashierServiceTests`
+  - `HealthEndpointIntegrationTests`
 
 ### 3.5 CI/CD
 - Pipeline CI en GitHub Actions con:
@@ -65,7 +68,7 @@ Entregar un POS robusto y mantenible con:
 
 ### 3.6 Documentación
 - README operativo actualizado.
-- Runbooks de desarrollo local e incident response.
+- Runbooks de desarrollo local, incident response, performance baseline y deploy/rollback.
 - Checklist senior-ready vivo para seguimiento.
 
 ---
@@ -79,6 +82,8 @@ Entregar un POS robusto y mantenible con:
 6. Gating de cobertura en CI.
 7. Extracción de Shift/Inventory a servicios.
 8. Consolidación de bitácora y actualización de checklist.
+9. Extracción de caja a servicio + idempotencia básica y baseline de performance.
+10. Integración API inicial con `WebApplicationFactory` (health smoke).
 
 ---
 
@@ -103,12 +108,7 @@ Entregar un POS robusto y mantenible con:
 - Definir catálogo de códigos de error por dominio (AUTH, ORDER, SHIFT, INV, CASH, REPORT, USER, TABLE).
 
 ### 6.3 Testing
-- Agregar tests de integración API+DB para endpoints críticos:
-  - órdenes,
-  - pagos/caja,
-  - turnos,
-  - inventario,
-  - auth refresh edge-cases.
+- Expandir tests de integración (actualmente hay smoke inicial) a flujos críticos: órdenes, pagos/caja, turnos, inventario, auth refresh edge-cases.
 - Subir cobertura efectiva más allá del mínimo (meta sugerida: >= 75%).
 
 ### 6.4 WPF
@@ -116,12 +116,12 @@ Entregar un POS robusto y mantenible con:
 - Mejorar testabilidad de navegación.
 
 ### 6.5 Resiliencia
-- Implementar idempotencia para pagos/cierres de turno/operaciones de riesgo.
-- Definir estrategia de reintento y deduplicación por `Idempotency-Key`.
+- Extender idempotencia más allá de pagos de caja (cierres/órdenes críticas).
+- Definir política de expiración/almacenamiento para llaves de idempotencia.
 
 ### 6.6 Operación y gobernanza
-- Ampliar runbooks con despliegue por entorno y rollback.
-- Definir Definition of Done por PR (arquitectura, tests, logs, docs, seguridad).
+- Runbook de despliegue/rollback ya creado; falta institucionalizar su uso operativo.
+- Definition of Done por PR ya creado; falta institucionalizarlo en revisiones obligatorias.
 
 ---
 

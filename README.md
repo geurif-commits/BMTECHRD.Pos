@@ -71,7 +71,19 @@ dotnet ef migrations add NombreMigracion --project BMTECHRD.Pos.Infrastructure -
 
 - `docs/runbooks/LOCAL_DEV.md`
 - `docs/runbooks/INCIDENT_RESPONSE.md`
+- `docs/runbooks/PERFORMANCE_BASELINE.md`
+- `docs/runbooks/DEPLOY_ROLLBACK.md`
 
 ## Bitácora técnica
 
 - `docs/PROJECT_BITACORA_SENIOR_READY.md`
+
+
+## Governance
+
+- `docs/DEFINITION_OF_DONE.md`
+
+
+## Resiliencia
+
+- Endpoint `POST /api/cash/payments` soporta idempotencia básica vía header `Idempotency-Key`.
