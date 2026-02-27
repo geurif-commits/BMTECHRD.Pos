@@ -22,6 +22,12 @@ jobs:
       - name: Build (Release)
         run: dotnet build BMTECHRD.Pos.slnx -c Release --no-restore
 
+      - name: Static analysis (Roslyn)
+        run: dotnet build BMTECHRD.Pos.slnx -c Release --no-restore /p:RunAnalyzers=true
+
+      - name: Static analysis (dotnet format analyzers)
+        run: dotnet format BMTECHRD.Pos.slnx --no-restore --verify-no-changes --severity warn
+
       - name: Test + Coverage (Solution)
         run: >
           dotnet test BMTECHRD.Pos.slnx

@@ -45,3 +45,9 @@
 - [x] Prueba de carga base inicial (`k6_cashier_smoke.js`).
 - [x] Endurecida idempotencia en operaciones críticas adicionales (`Orders batch`, `Shifts open/close`, `Cashier payments`).
 - [x] Consolidado almacenamiento/expiración robusta de llaves de idempotencia (store dedicado con TTL y compactación).
+
+
+## 8) Análisis estático
+- [x] Baseline de analizadores .NET habilitado (`Directory.Build.props` + `.editorconfig`).
+- [x] Quality gate en CI para análisis estático (`dotnet build` con analizadores + `dotnet format --verify-no-changes`).
+- [x] Documentación de comandos de análisis estático para ejecución local.

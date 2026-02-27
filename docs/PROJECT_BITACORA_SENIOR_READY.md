@@ -105,6 +105,7 @@ Entregar un POS robusto y mantenible con:
 18. Extracción de `AuthController` a `AuthService` + unificación de contrato de error en auth.
 19. Extracción de `KitchenController`/`BarController` a `ProductionQueueService` + contrato de error consistente.
 20. Desacople adicional WPF con `IMainWindowNavigationCoordinator`.
+21. Preparación de baseline de análisis estático (analyzers + dotnet format + gates en CI).
 
 ---
 
@@ -143,6 +144,10 @@ Entregar un POS robusto y mantenible con:
 ### 6.6 Operación y gobernanza
 - Uso operativo institucionalizado mediante plantilla de PR con checklist DoD obligatorio (`.github/pull_request_template.md`).
 - Definition of Done incorporado como checklist de validación por PR.
+
+### 6.7 Análisis estático
+- Baseline habilitado con analizadores de .NET (`Directory.Build.props`) y severidades base en `.editorconfig`.
+- CI ejecuta análisis estático (Roslyn + `dotnet format` analyzers) para prevenir regresiones de calidad.
 
 ---
 

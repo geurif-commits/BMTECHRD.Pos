@@ -87,3 +87,11 @@ dotnet ef migrations add NombreMigracion --project BMTECHRD.Pos.Infrastructure -
 ## Resiliencia
 
 - Endpoints críticos (`POST /api/cash/payments`, `POST /api/orders/batch`, `POST /api/shifts/open`, `POST /api/shifts/close`) soportan idempotencia vía header `Idempotency-Key` con almacenamiento dedicado y TTL.
+
+
+## Static analysis
+
+- `dotnet build BMTECHRD.Pos.slnx -c Release /p:RunAnalyzers=true`
+- `dotnet format BMTECHRD.Pos.slnx --verify-no-changes --severity warn`
+
+These commands are also enforced in CI to keep a stable analysis baseline.
