@@ -15,6 +15,10 @@ public sealed class CashierService : ICashierService
 {
     private static readonly TimeSpan IdempotencyTtl = TimeSpan.FromHours(24);
     private const string IdempotencyScope = "CASHIER_PAYMENT_CREATE";
+    private const string ShiftStatusOpen = "OPEN";
+    private const string ItemStatusSent = "SENT";
+    private const string ItemStatusInProgress = "IN_PROGRESS";
+    private const string ItemStatusDone = "DONE";
 
     private readonly AppDbContext _ctx;
     private readonly IHubContext<PosHub> _hub;
@@ -83,7 +87,7 @@ public sealed class CashierService : ICashierService
                 UnitPrice = g.Key.UnitPriceSnapshot,
                 LineTotal = g.Sum(x => x.UnitPriceSnapshot * x.Quantity),
                 Area = g.Key.Area.ToString(),
-                Status = g.Any(x => x.Status == OrderItemStatus.SENT) ? "SENT" : (g.Any(x => x.Status == OrderItemStatus.IN_PROGRESS) ? "IN_PROGRESS" : "DONE")
+                Status = g.Any(x => x.Status == OrderItemStatus.SENT) ? ItemStatusSent : (g.Any(x => x.Status == OrderItemStatus.IN_PROGRESS) ? ItemStatusInProgress : ItemStatusDone)
             }).ToList();
 
         var subtotal = lines.Sum(l => l.LineTotal);
@@ -124,7 +128,7 @@ public sealed class CashierService : ICashierService
             throw new ApiProblemException(StatusCodes.Status400BadRequest, "Table invalid", "Table is not open", "CASH_TABLE_NOT_OPEN");
 
         var shift = await _ctx.Shifts.FindAsync(new object?[] { req.ShiftId }, ct);
-        if (shift == null || shift.BusinessId != req.BusinessId || shift.Status != "OPEN")
+        if (shift == null || shift.BusinessId != req.BusinessId || shift.Status != ShiftStatusOpen)
             throw new ApiProblemException(StatusCodes.Status400BadRequest, "Shift invalid", "Invalid or closed shift", "CASH_SHIFT_INVALID");
 
         if (shift.UserId != req.ActorUserId)

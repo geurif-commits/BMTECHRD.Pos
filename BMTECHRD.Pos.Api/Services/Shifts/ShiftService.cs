@@ -15,6 +15,8 @@ public sealed class ShiftService : IShiftService
     private static readonly TimeSpan IdempotencyTtl = TimeSpan.FromHours(24);
     private const string OpenScope = "SHIFT_OPEN";
     private const string CloseScope = "SHIFT_CLOSE";
+    private const string ShiftStatusOpen = "OPEN";
+    private const string ShiftStatusNone = "NONE";
 
     private readonly AppDbContext _ctx;
     private readonly IHubContext<PosHub> _hub;
@@ -29,9 +31,9 @@ public sealed class ShiftService : IShiftService
 
     public async Task<ShiftStatusResponse> GetActiveAsync(Guid businessId, Guid userId, CancellationToken ct)
     {
-        var shift = await _ctx.Shifts.AsNoTracking().FirstOrDefaultAsync(s => s.BusinessId == businessId && s.UserId == userId && s.Status == "OPEN", ct);
+        var shift = await _ctx.Shifts.AsNoTracking().FirstOrDefaultAsync(s => s.BusinessId == businessId && s.UserId == userId && s.Status == ShiftStatusOpen, ct);
         if (shift == null)
-            return new ShiftStatusResponse { Status = "NONE" };
+            return new ShiftStatusResponse { Status = ShiftStatusNone };
 
         var username = await _ctx.Users.AsNoTracking()
             .Where(u => u.Id == shift.UserId)
@@ -41,7 +43,7 @@ public sealed class ShiftService : IShiftService
         return new ShiftStatusResponse
         {
             ShiftId = shift.Id,
-            Status = "OPEN",
+            Status = ShiftStatusOpen,
             OpenedAt = shift.OpenedAt,
             OpenedByUsername = username,
             OpeningCash = shift.OpeningCash,
@@ -104,7 +106,7 @@ public sealed class ShiftService : IShiftService
             }
         }
 
-        var existing = await _ctx.Shifts.AnyAsync(s => s.UserId == req.UserId && s.Status == "OPEN", ct);
+        var existing = await _ctx.Shifts.AnyAsync(s => s.UserId == req.UserId && s.Status == ShiftStatusOpen, ct);
         if (existing)
             throw new ApiProblemException(StatusCodes.Status409Conflict, "Shift conflict", "A shift is already open for this user", "SHIFT_ALREADY_OPEN");
 
@@ -115,7 +117,7 @@ public sealed class ShiftService : IShiftService
             UserId = req.UserId,
             OpenedAt = DateTime.UtcNow,
             OpeningCash = req.OpeningCash,
-            Status = "OPEN",
+            Status = ShiftStatusOpen,
             Notes = req.Notes
         };
 
@@ -156,7 +158,7 @@ public sealed class ShiftService : IShiftService
         }
 
         var shift = await _ctx.Shifts.FindAsync(new object?[] { req.ShiftId }, ct);
-        if (shift == null || shift.BusinessId != req.BusinessId || shift.Status != "OPEN")
+        if (shift == null || shift.BusinessId != req.BusinessId || shift.Status != ShiftStatusOpen)
             throw new ApiProblemException(StatusCodes.Status400BadRequest, "Shift invalid", "Shift not found or not open", "SHIFT_NOT_OPEN");
 
         if (shift.UserId != req.UserId)

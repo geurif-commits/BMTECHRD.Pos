@@ -12,6 +12,9 @@ namespace BMTECHRD.Pos.Api.Services.Production;
 
 public sealed class ProductionQueueService : IProductionQueueService
 {
+    private const string TopicKitchenQueueUpdated = "kitchen.queue.updated";
+    private const string TopicBarQueueUpdated = "bar.queue.updated";
+
     private readonly AppDbContext _ctx;
     private readonly IHubContext<PosHub> _hub;
 
@@ -66,7 +69,7 @@ public sealed class ProductionQueueService : IProductionQueueService
 
         await _ctx.SaveChangesAsync(ct);
 
-        var topic = area == ProductionArea.KITCHEN ? "kitchen.queue.updated" : "bar.queue.updated";
+        var topic = area == ProductionArea.KITCHEN ? TopicKitchenQueueUpdated : TopicBarQueueUpdated;
         await _hub.Clients.Group(item.BusinessId.ToString()).SendAsync(topic, cancellationToken: ct);
 
         return item;

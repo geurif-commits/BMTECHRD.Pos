@@ -30,7 +30,7 @@ En este entorno no está disponible `dotnet`, por lo que el inventario se constr
 | 15 | Bajo | Capturas genéricas en UI (diagnóstico) | `ShiftsAdminViewModel` | 🔄 Pendiente lote C |
 | 16 | Bajo | `Task.Run` en UI orchestration (revisión) | `MainWindow.xaml.cs` | 🔄 Pendiente lote C |
 | 17 | Bajo | String interpolation en errores de IO/config | `LocalDeviceConfigService` | 🔄 Pendiente lote C |
-| 18 | Bajo | Validación hardcoded strings estado | `CashierViewModel` | 🔄 Pendiente lote B |
+| 18 | Bajo | Validación hardcoded strings estado | `CashierService`/`ShiftService` | ✅ Corregido (constantes de estado) |
 | 19 | Bajo | Revisión de nulabilidad DTOs integración | `AuthFlowIntegrationTests` y similares | 🔄 Parcial (1/3) |
 | 20 | Bajo | Revisión de consistencia `CancellationToken` UI/API boundary | Varios | 🔄 Pendiente lote B |
 
@@ -67,3 +67,9 @@ En este entorno no está disponible `dotnet`, por lo que el inventario se constr
 4. **WPF App (culture/perf/design)**: `CA1305`, `CA1310`, `CA1866`, `CA1869`, `CA1859`, `CA1051`, `CA1822`, `CA2000`.
 
 > Nota: los warnings no bloquean build por ahora; se abordarán en lotes B/C manteniendo compatibilidad de contratos y naming públicos donde aplique.
+
+
+## Avance Fase 2 (incremental)
+- ✅ Se eliminaron strings mágicos de estado en servicios críticos (`ShiftService` y `CashierService`) mediante constantes internas de dominio operativo.
+- ✅ Se consolidaron topics de SignalR en constantes en `ProductionQueueService` para reducir hardcoding y facilitar mantenimiento.
+- 🔄 Continúa pendiente el lote C (manejo de excepciones UI/config y refinamientos de mantenibilidad).
