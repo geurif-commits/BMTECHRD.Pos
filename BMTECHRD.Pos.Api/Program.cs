@@ -1,4 +1,5 @@
 using BMTECHRD.Pos.Api.Services.Orders;
+using BMTECHRD.Pos.Api.Services.Reports;
 using BMTECHRD.Pos.Api.Hubs;
 using BMTECHRD.Pos.Api.Extensions;
 using BMTECHRD.Pos.Infrastructure;
@@ -13,6 +14,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
 builder.Services.AddScoped<IOrderBatchService, OrderBatchService>();
+builder.Services.AddScoped<IReportsService, ReportsService>();
 
 // Infrastructure (DbContext, Auth services)
 builder.Services.AddInfrastructure(builder.Configuration);

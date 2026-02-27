@@ -65,3 +65,9 @@ dotnet ef migrations add NombreMigracion --project BMTECHRD.Pos.Infrastructure -
 - Si falla build por WPF en CI, valida imports y referencias de `BMTECHRD.Pos.App`.
 - Si falla auth, revisa sincronía de `Issuer/Audience/SigningKey` entre API y cliente.
 - Si falla conexión DB, valida cadena `DefaultConnection` y permisos del usuario PostgreSQL.
+
+
+## Runbooks
+
+- `docs/runbooks/LOCAL_DEV.md`
+- `docs/runbooks/INCIDENT_RESPONSE.md`

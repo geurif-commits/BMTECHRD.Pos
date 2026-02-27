@@ -14,6 +14,7 @@ namespace BMTECHRD.Pos.App
     {
         private DeviceMode _deviceMode;
         private readonly LocalDeviceConfigService _configService;
+        private readonly IDeviceRolePolicy _deviceRolePolicy;
         private AuthSessionService? _authSession;
         private Services.SignalRClient? _signalR;
 
@@ -47,6 +48,7 @@ namespace BMTECHRD.Pos.App
         {
             InitializeComponent();
             _configService = new LocalDeviceConfigService();
+            _deviceRolePolicy = App.Services.GetService<IDeviceRolePolicy>() ?? new DeviceRolePolicy();
         }
 
         public void SetContent(object content)
@@ -136,7 +138,7 @@ namespace BMTECHRD.Pos.App
                     System.Windows.Application.Current.Dispatcher.Invoke(() =>
                     {
                         // Validar rol por device mode
-                        if (!ValidateRoleForDeviceMode(session.Role))
+                        if (!_deviceRolePolicy.IsRoleAllowedForDeviceMode(_deviceMode, session.Role))
                         {
                             var accessDenied = new Views.AccessDeniedView();
                             accessDenied.Initialize(_signalR, session.BusinessId);
@@ -179,21 +181,6 @@ namespace BMTECHRD.Pos.App
             {
                 return null;
             }
-        }
-
-        private bool ValidateRoleForDeviceMode(string? role)
-        {
-            var userRole = role?.ToUpperInvariant() ?? "";
-
-            return _deviceMode switch
-            {
-                DeviceMode.Server => userRole == "ADMIN" || userRole == "SUPERVISOR",
-                DeviceMode.Cashier => userRole == "CASHIER" || userRole == "ADMIN" || userRole == "SUPERVISOR",
-                DeviceMode.Kitchen => userRole == "KITCHEN" || userRole == "ADMIN" || userRole == "SUPERVISOR",
-                DeviceMode.Bar => userRole == "BAR" || userRole == "ADMIN" || userRole == "SUPERVISOR",
-                DeviceMode.Floor => userRole == "WAITER" || userRole == "CASHIER" || userRole == "ADMIN" || userRole == "SUPERVISOR",
-                _ => false
-            };
         }
 
         private void LoadViewForDeviceMode(Services.ApiClient api, Services.SignalRClient signalR, SessionModel session)
