@@ -86,4 +86,4 @@ dotnet ef migrations add NombreMigracion --project BMTECHRD.Pos.Infrastructure -
 
 ## Resiliencia
 
-- Endpoint `POST /api/cash/payments` soporta idempotencia básica vía header `Idempotency-Key`.
+- Endpoints críticos (`POST /api/cash/payments`, `POST /api/orders/batch`, `POST /api/shifts/open`, `POST /api/shifts/close`) soportan idempotencia vía header `Idempotency-Key` con almacenamiento dedicado y TTL.

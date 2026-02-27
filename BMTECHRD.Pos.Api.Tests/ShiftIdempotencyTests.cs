@@ -1,4 +1,5 @@
 using BMTECHRD.Pos.Api.Hubs;
+using BMTECHRD.Pos.Api.Services.Idempotency;
 using BMTECHRD.Pos.Api.Services.Shifts;
 using BMTECHRD.Pos.Application.DTOs;
 using BMTECHRD.Pos.Infrastructure.Persistence;
@@ -29,7 +30,7 @@ public class ShiftIdempotencyTests
         await db.SaveChangesAsync();
 
         var hub = new Mock<IHubContext<PosHub>>().Object;
-        var sut = new ShiftService(db, hub);
+        var sut = new ShiftService(db, hub, new AuditLogIdempotencyKeyStore(db));
 
         var req = new CreateShiftRequest
         {

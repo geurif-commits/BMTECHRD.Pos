@@ -1,5 +1,6 @@
 using BMTECHRD.Pos.Api.Common;
 using BMTECHRD.Pos.Api.Hubs;
+using BMTECHRD.Pos.Api.Services.Idempotency;
 using BMTECHRD.Pos.Application.DTOs;
 using BMTECHRD.Pos.Domain.Enums;
 using BMTECHRD.Pos.Infrastructure.Persistence;
@@ -11,29 +12,34 @@ namespace BMTECHRD.Pos.Api.Services.Shifts;
 
 public sealed class ShiftService : IShiftService
 {
+    private static readonly TimeSpan IdempotencyTtl = TimeSpan.FromHours(24);
+    private const string OpenScope = "SHIFT_OPEN";
+    private const string CloseScope = "SHIFT_CLOSE";
+
     private readonly AppDbContext _ctx;
     private readonly IHubContext<PosHub> _hub;
+    private readonly IIdempotencyKeyStore _idempotencyKeyStore;
 
-    public ShiftService(AppDbContext ctx, IHubContext<PosHub> hub)
+    public ShiftService(AppDbContext ctx, IHubContext<PosHub> hub, IIdempotencyKeyStore idempotencyKeyStore)
     {
         _ctx = ctx;
         _hub = hub;
+        _idempotencyKeyStore = idempotencyKeyStore;
     }
 
-    public async Task<ShiftStatusResponse> GetActiveAsync(Guid businessId, Guid userId, CancellationToken ct)
+    public async Task<ActiveShiftResponse> GetActiveAsync(Guid businessId, Guid userId, CancellationToken ct)
     {
-        var shift = await _ctx.Shifts.FirstOrDefaultAsync(s => s.BusinessId == businessId && s.UserId == userId && s.Status == "OPEN", ct);
-        if (shift == null) return new ShiftStatusResponse { Status = "NONE" };
+        var shift = await _ctx.Shifts.AsNoTracking().FirstOrDefaultAsync(s => s.BusinessId == businessId && s.UserId == userId && s.Status == "OPEN", ct);
+        if (shift == null)
+            return new ActiveShiftResponse { HasOpenShift = false };
 
-        var username = await _ctx.Users.Where(u => u.Id == shift.UserId).Select(u => u.Username).FirstOrDefaultAsync(ct);
-
-        return new ShiftStatusResponse
+        return new ActiveShiftResponse
         {
+            HasOpenShift = true,
             ShiftId = shift.Id,
-            Status = "OPEN",
             OpenedAt = shift.OpenedAt,
-            OpenedByUsername = username,
-            OpeningCash = shift.OpeningCash
+            OpeningCash = shift.OpeningCash,
+            Notes = shift.Notes
         };
     }
 
@@ -43,14 +49,13 @@ public sealed class ShiftService : IShiftService
         {
             var actor = await _ctx.Users.FindAsync(new object?[] { actorUserId.Value }, ct);
             if (actor == null || actor.BusinessId != businessId)
-                throw new ApiProblemException(StatusCodes.Status403Forbidden, "Forbidden", "Actor not allowed for business", "SHIFT_ACTOR_FORBIDDEN");
-
-            if (!(actor.Role == UserRole.ADMIN || actor.Role == UserRole.SUPERVISOR))
+                throw new ApiProblemException(StatusCodes.Status403Forbidden, "Forbidden", "Actor not allowed", "SHIFT_ACTOR_FORBIDDEN");
+            if (actor.Role != UserRole.ADMIN && actor.Role != UserRole.SUPERVISOR)
                 throw new ApiProblemException(StatusCodes.Status403Forbidden, "Forbidden", "Actor role not allowed", "SHIFT_ACTOR_ROLE_FORBIDDEN");
         }
 
-        var take = limit ?? 200;
-        if (take <= 0) take = 200;
+        var take = limit ?? 100;
+        if (take <= 0) take = 100;
         if (take > 1000) take = 1000;
 
         var query = _ctx.Shifts.AsNoTracking().Where(s => s.BusinessId == businessId);
@@ -59,20 +64,7 @@ public sealed class ShiftService : IShiftService
         if (to.HasValue) query = query.Where(s => s.OpenedAt <= to.Value);
         if (!string.IsNullOrWhiteSpace(status)) query = query.Where(s => s.Status == status);
 
-        var rows = await query.OrderByDescending(s => s.OpenedAt)
-            .Take(take)
-            .Select(s => new
-            {
-                s.Id,
-                s.UserId,
-                s.OpenedAt,
-                s.ClosedAt,
-                s.OpeningCash,
-                s.ClosingCash,
-                s.Status
-            })
-            .ToListAsync(ct);
-
+        var rows = await query.OrderByDescending(s => s.OpenedAt).Take(take).ToListAsync(ct);
         var userIds = rows.Select(r => r.UserId).Distinct().ToList();
         var users = await _ctx.Users.AsNoTracking().Where(u => userIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Username, ct);
 
@@ -91,17 +83,12 @@ public sealed class ShiftService : IShiftService
 
     public async Task<CreateShiftResponse> OpenAsync(CreateShiftRequest req, string? idempotencyKey, CancellationToken ct)
     {
-
         if (!string.IsNullOrWhiteSpace(idempotencyKey))
         {
-            var replay = await _ctx.AuditLogs.AsNoTracking()
-                .Where(a => a.BusinessId == req.BusinessId && a.ActorUserId == req.UserId && a.Action == "SHIFT_OPEN" && a.DataJson != null && a.DataJson.Contains(idempotencyKey))
-                .OrderByDescending(a => a.CreatedAt)
-                .FirstOrDefaultAsync(ct);
-
-            if (replay != null && replay.EntityId != Guid.Empty)
+            var replayShiftId = await _idempotencyKeyStore.TryGetEntityIdAsync(OpenScope, req.BusinessId, req.UserId, idempotencyKey, ct);
+            if (replayShiftId.HasValue)
             {
-                var previous = await _ctx.Shifts.AsNoTracking().FirstOrDefaultAsync(s => s.Id == replay.EntityId, ct);
+                var previous = await _ctx.Shifts.AsNoTracking().FirstOrDefaultAsync(s => s.Id == replayShiftId.Value, ct);
                 if (previous != null)
                     return new CreateShiftResponse { ShiftId = previous.Id, OpenedAt = previous.OpenedAt };
             }
@@ -131,11 +118,16 @@ public sealed class ShiftService : IShiftService
             Action = "SHIFT_OPEN",
             EntityType = "Shift",
             EntityId = shift.Id,
-            DataJson = $"idempotencyKey={idempotencyKey};shiftId={shift.Id}",
+            DataJson = "created",
             CreatedAt = DateTime.UtcNow
         });
 
         await _ctx.SaveChangesAsync(ct);
+
+        if (!string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            await _idempotencyKeyStore.SaveAsync(OpenScope, req.BusinessId, req.UserId, idempotencyKey, shift.Id, IdempotencyTtl, ct);
+        }
 
         await _hub.Clients.Group(req.BusinessId.ToString()).SendAsync("cash.updated", cancellationToken: ct);
 
@@ -144,17 +136,12 @@ public sealed class ShiftService : IShiftService
 
     public async Task<ShiftSummaryDto> CloseAsync(CloseShiftRequest req, string? idempotencyKey, CancellationToken ct)
     {
-
         if (!string.IsNullOrWhiteSpace(idempotencyKey))
         {
-            var replay = await _ctx.AuditLogs.AsNoTracking()
-                .Where(a => a.BusinessId == req.BusinessId && a.ActorUserId == req.UserId && a.Action == "SHIFT_CLOSE" && a.DataJson != null && a.DataJson.Contains(idempotencyKey))
-                .OrderByDescending(a => a.CreatedAt)
-                .FirstOrDefaultAsync(ct);
-
-            if (replay != null && replay.EntityId != Guid.Empty)
+            var replayShiftId = await _idempotencyKeyStore.TryGetEntityIdAsync(CloseScope, req.BusinessId, req.UserId, idempotencyKey, ct);
+            if (replayShiftId.HasValue)
             {
-                return await SummaryAsync(replay.EntityId, req.BusinessId, ct);
+                return await SummaryAsync(replayShiftId.Value, req.BusinessId, ct);
             }
         }
 
@@ -184,11 +171,16 @@ public sealed class ShiftService : IShiftService
             Action = "SHIFT_CLOSE",
             EntityType = "Shift",
             EntityId = shift.Id,
-            DataJson = $"idempotencyKey={idempotencyKey};shiftId={shift.Id}",
+            DataJson = "closed",
             CreatedAt = DateTime.UtcNow
         });
 
         await _ctx.SaveChangesAsync(ct);
+
+        if (!string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            await _idempotencyKeyStore.SaveAsync(CloseScope, req.BusinessId, req.UserId, idempotencyKey, shift.Id, IdempotencyTtl, ct);
+        }
 
         await _hub.Clients.Group(req.BusinessId.ToString()).SendAsync("cash.updated", cancellationToken: ct);
 

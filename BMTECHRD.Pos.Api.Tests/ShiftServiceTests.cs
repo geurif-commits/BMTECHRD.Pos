@@ -1,5 +1,6 @@
 using BMTECHRD.Pos.Api.Common;
 using BMTECHRD.Pos.Api.Hubs;
+using BMTECHRD.Pos.Api.Services.Idempotency;
 using BMTECHRD.Pos.Api.Services.Shifts;
 using BMTECHRD.Pos.Infrastructure.Persistence;
 using Microsoft.AspNetCore.SignalR;
@@ -29,7 +30,7 @@ public class ShiftServiceTests
         await db.SaveChangesAsync();
 
         var hub = new Mock<IHubContext<PosHub>>().Object;
-        var sut = new ShiftService(db, hub);
+        var sut = new ShiftService(db, hub, new AuditLogIdempotencyKeyStore(db));
 
         var ex = await Assert.ThrowsAsync<ApiProblemException>(() =>
             sut.ListAsync(businessId, null, null, null, null, 100, actorId, CancellationToken.None));

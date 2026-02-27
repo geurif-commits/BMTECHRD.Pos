@@ -1,6 +1,7 @@
 using System.Text.Json;
 using BMTECHRD.Pos.Api.Common;
 using BMTECHRD.Pos.Api.Hubs;
+using BMTECHRD.Pos.Api.Services.Idempotency;
 using BMTECHRD.Pos.Application.DTOs;
 using BMTECHRD.Pos.Domain.Enums;
 using BMTECHRD.Pos.Infrastructure.Persistence;
@@ -12,13 +13,18 @@ namespace BMTECHRD.Pos.Api.Services.Cashier;
 
 public sealed class CashierService : ICashierService
 {
+    private static readonly TimeSpan IdempotencyTtl = TimeSpan.FromHours(24);
+    private const string IdempotencyScope = "CASHIER_PAYMENT_CREATE";
+
     private readonly AppDbContext _ctx;
     private readonly IHubContext<PosHub> _hub;
+    private readonly IIdempotencyKeyStore _idempotencyKeyStore;
 
-    public CashierService(AppDbContext ctx, IHubContext<PosHub> hub)
+    public CashierService(AppDbContext ctx, IHubContext<PosHub> hub, IIdempotencyKeyStore idempotencyKeyStore)
     {
         _ctx = ctx;
         _hub = hub;
+        _idempotencyKeyStore = idempotencyKeyStore;
     }
 
     public async Task<List<TableSummaryDto>> GetOpenTablesAsync(Guid businessId, CancellationToken ct)
@@ -129,14 +135,16 @@ public sealed class CashierService : ICashierService
 
         if (!string.IsNullOrWhiteSpace(idempotencyKey))
         {
-            var existing = await _ctx.Payments.AsNoTracking()
-                .Where(p => p.BusinessId == req.BusinessId && p.TableId == req.TableId && p.ShiftId == req.ShiftId && p.CreatedByUserId == req.ActorUserId)
-                .OrderByDescending(p => p.CreatedAt)
-                .FirstOrDefaultAsync(p => p.MetaJson != null && p.MetaJson.Contains($"\"idempotencyKey\":\"{idempotencyKey}\""), ct);
-
-            if (existing != null)
+            var replayPaymentId = await _idempotencyKeyStore.TryGetEntityIdAsync(IdempotencyScope, req.BusinessId, req.ActorUserId, idempotencyKey, ct);
+            if (replayPaymentId.HasValue)
             {
-                return await BuildPaymentStateAsync(req.BusinessId, req.TableId, req.Amount, req.CashGiven, closed: false, closeBlockedReason: "Idempotent replay", ct);
+                var existingPayment = await _ctx.Payments.AsNoTracking()
+                    .FirstOrDefaultAsync(p => p.Id == replayPaymentId.Value, ct);
+
+                if (existingPayment != null)
+                {
+                    return await BuildPaymentStateAsync(req.BusinessId, req.TableId, existingPayment.Amount, req.CashGiven, closed: false, closeBlockedReason: "Idempotent replay", ct);
+                }
             }
         }
 
@@ -144,13 +152,7 @@ public sealed class CashierService : ICashierService
         if (method != PaymentMethod.CASH && req.Amount > dueBefore)
             throw new ApiProblemException(StatusCodes.Status400BadRequest, "Amount invalid", "Non-cash payments cannot exceed due amount", "CASH_NON_CASH_EXCEEDS_DUE");
 
-        var metaPayload = new
-        {
-            requestMeta = req.Meta,
-            idempotencyKey
-        };
-
-        _ctx.Payments.Add(new BMTECHRD.Pos.Domain.Entities.Payment
+        var payment = new BMTECHRD.Pos.Domain.Entities.Payment
         {
             Id = Guid.NewGuid(),
             BusinessId = req.BusinessId,
@@ -159,11 +161,22 @@ public sealed class CashierService : ICashierService
             CreatedByUserId = req.ActorUserId,
             Method = method,
             Amount = req.Amount,
-            MetaJson = JsonSerializer.Serialize(metaPayload),
+            MetaJson = JsonSerializer.Serialize(new
+            {
+                requestMeta = req.Meta,
+                idempotencyKey
+            }),
             CreatedAt = DateTime.UtcNow
-        });
+        };
+
+        _ctx.Payments.Add(payment);
 
         await _ctx.SaveChangesAsync(ct);
+
+        if (!string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            await _idempotencyKeyStore.SaveAsync(IdempotencyScope, req.BusinessId, req.ActorUserId, idempotencyKey, payment.Id, IdempotencyTtl, ct);
+        }
 
         var dueAfter = await ComputeDueAsync(req.BusinessId, req.TableId, ct);
 

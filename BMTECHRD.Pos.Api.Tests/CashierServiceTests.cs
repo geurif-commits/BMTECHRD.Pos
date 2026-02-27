@@ -1,5 +1,6 @@
 using BMTECHRD.Pos.Api.Common;
 using BMTECHRD.Pos.Api.Hubs;
+using BMTECHRD.Pos.Api.Services.Idempotency;
 using BMTECHRD.Pos.Api.Services.Cashier;
 using BMTECHRD.Pos.Application.DTOs;
 using BMTECHRD.Pos.Domain.Entities;
@@ -27,7 +28,7 @@ public class CashierServiceTests
         await db.SaveChangesAsync();
 
         var hub = new Mock<IHubContext<PosHub>>().Object;
-        var sut = new CashierService(db, hub);
+        var sut = new CashierService(db, hub, new AuditLogIdempotencyKeyStore(db));
 
         var req = new CreatePaymentRequest
         {
@@ -60,7 +61,7 @@ public class CashierServiceTests
         await db.SaveChangesAsync();
 
         var hub = new Mock<IHubContext<PosHub>>().Object;
-        var sut = new CashierService(db, hub);
+        var sut = new CashierService(db, hub, new AuditLogIdempotencyKeyStore(db));
 
         var ex = await Assert.ThrowsAsync<ApiProblemException>(() =>
             sut.CloseTableAsync(new CloseTableRequest { BusinessId = businessId, TableId = tableId, ActorUserId = userId }, CancellationToken.None));

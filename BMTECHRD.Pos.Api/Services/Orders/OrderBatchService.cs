@@ -1,5 +1,6 @@
 using BMTECHRD.Pos.Api.Common;
 using BMTECHRD.Pos.Api.Hubs;
+using BMTECHRD.Pos.Api.Services.Idempotency;
 using BMTECHRD.Pos.Application.DTOs;
 using BMTECHRD.Pos.Domain.Entities;
 using BMTECHRD.Pos.Domain.Enums;
@@ -11,51 +12,42 @@ namespace BMTECHRD.Pos.Api.Services.Orders;
 
 public sealed class OrderBatchService : IOrderBatchService
 {
+    private static readonly TimeSpan IdempotencyTtl = TimeSpan.FromHours(24);
+    private const string IdempotencyScope = "ORDER_BATCH_CREATE";
+
     private readonly AppDbContext _ctx;
     private readonly IHubContext<PosHub> _hub;
+    private readonly IIdempotencyKeyStore _idempotencyKeyStore;
 
-    public OrderBatchService(AppDbContext ctx, IHubContext<PosHub> hub)
+    public OrderBatchService(AppDbContext ctx, IHubContext<PosHub> hub, IIdempotencyKeyStore idempotencyKeyStore)
     {
         _ctx = ctx;
         _hub = hub;
+        _idempotencyKeyStore = idempotencyKeyStore;
     }
 
     public async Task<CreateOrderBatchResponse> CreateBatchAsync(CreateOrderBatchRequest req, string? idempotencyKey, CancellationToken ct)
     {
-
         if (!string.IsNullOrWhiteSpace(idempotencyKey))
         {
-            var replay = await _ctx.AuditLogs.AsNoTracking()
-                .Where(a => a.BusinessId == req.BusinessId && a.ActorUserId == req.ActorUserId && a.Action == "ORDER_BATCH_CREATE" && a.DataJson != null && a.DataJson.Contains(idempotencyKey))
-                .OrderByDescending(a => a.CreatedAt)
-                .FirstOrDefaultAsync(ct);
-
-            if (replay != null)
+            var existingOrderId = await _idempotencyKeyStore.TryGetEntityIdAsync(IdempotencyScope, req.BusinessId, req.ActorUserId, idempotencyKey, ct);
+            if (existingOrderId.HasValue)
             {
-                var data = replay.DataJson ?? string.Empty;
-                var marker = "orderId=";
-                var idx = data.IndexOf(marker, StringComparison.Ordinal);
-                if (idx >= 0)
+                var existingItems = await _ctx.OrderItems.AsNoTracking().Where(oi => oi.OrderId == existingOrderId.Value).ToListAsync(ct);
+                if (existingItems.Count > 0)
                 {
-                    var start = idx + marker.Length;
-                    var end = data.IndexOf(';', start);
-                    var idText = end > start ? data[start..end] : data[start..];
-                    if (Guid.TryParse(idText, out var existingOrderId))
+                    return new CreateOrderBatchResponse
                     {
-                        var existingItems = await _ctx.OrderItems.AsNoTracking().Where(oi => oi.OrderId == existingOrderId).ToListAsync(ct);
-                        return new CreateOrderBatchResponse
-                        {
-                            OrderId = existingOrderId,
-                            TotalItems = existingItems.Sum(i => i.Quantity),
-                            KitchenItems = existingItems.Where(i => i.Area == ProductionArea.KITCHEN).Sum(i => i.Quantity),
-                            BarItems = existingItems.Where(i => i.Area == ProductionArea.BAR).Sum(i => i.Quantity)
-                        };
-                    }
+                        OrderId = existingOrderId.Value,
+                        TotalItems = existingItems.Sum(i => i.Quantity),
+                        KitchenItems = existingItems.Where(i => i.Area == ProductionArea.KITCHEN).Sum(i => i.Quantity),
+                        BarItems = existingItems.Where(i => i.Area == ProductionArea.BAR).Sum(i => i.Quantity)
+                    };
                 }
             }
         }
 
-                var table = await _ctx.Tables.FindAsync(new object?[] { req.TableId }, ct);
+        var table = await _ctx.Tables.FindAsync(new object?[] { req.TableId }, ct);
         if (table == null || table.BusinessId != req.BusinessId)
             throw new ApiProblemException(400, "Table not found", "Table not found for business", "ORDER_TABLE_NOT_FOUND");
 
@@ -95,12 +87,16 @@ public sealed class OrderBatchService : IOrderBatchService
         };
         _ctx.Orders.Add(order);
 
-        int kitchen = 0, bar = 0, total = 0;
+        var totalItems = 0;
+        var kitchenItems = 0;
+        var barItems = 0;
 
         foreach (var line in req.Items)
         {
             var prod = products[line.ProductId];
-            var item = new OrderItem
+            var area = prod.Area;
+
+            var oi = new OrderItem
             {
                 Id = Guid.NewGuid(),
                 BusinessId = req.BusinessId,
@@ -109,40 +105,33 @@ public sealed class OrderBatchService : IOrderBatchService
                 ProductNameSnapshot = prod.Name,
                 UnitPriceSnapshot = prod.Price,
                 Quantity = line.Quantity,
-                Area = prod.Area,
+                Area = area,
                 Status = OrderItemStatus.SENT,
+                Notes = line.Notes,
                 CreatedAt = DateTime.UtcNow
             };
-            _ctx.OrderItems.Add(item);
+            _ctx.OrderItems.Add(oi);
 
             if (prod.TrackInventory)
-            {
                 prod.Stock -= line.Quantity;
-                var mov = new InventoryMovement
-                {
-                    Id = Guid.NewGuid(),
-                    BusinessId = req.BusinessId,
-                    ProductId = prod.Id,
-                    QuantityDelta = -line.Quantity,
-                    Reason = "SALE",
-                    ActorUserId = req.ActorUserId,
-                    CreatedAt = DateTime.UtcNow
-                };
-                _ctx.InventoryMovements.Add(mov);
-            }
 
-            if (prod.Area == ProductionArea.KITCHEN) kitchen += line.Quantity;
-            if (prod.Area == ProductionArea.BAR) bar += line.Quantity;
-            total += line.Quantity;
+            _ctx.InventoryMovements.Add(new InventoryMovement
+            {
+                Id = Guid.NewGuid(),
+                BusinessId = req.BusinessId,
+                ProductId = prod.Id,
+                QuantityDelta = -line.Quantity,
+                Reason = "Order item created",
+                ActorUserId = req.ActorUserId,
+                CreatedAt = DateTime.UtcNow
+            });
+
+            totalItems += line.Quantity;
+            if (area == ProductionArea.KITCHEN) kitchenItems += line.Quantity;
+            if (area == ProductionArea.BAR) barItems += line.Quantity;
         }
 
-        await _ctx.SaveChangesAsync(ct);
-        await tx.CommitAsync(ct);
-
-        if (kitchen > 0) await _hub.Clients.Group(req.BusinessId.ToString()).SendAsync("kitchen.queue.updated", cancellationToken: ct);
-        if (bar > 0) await _hub.Clients.Group(req.BusinessId.ToString()).SendAsync("bar.queue.updated", cancellationToken: ct);
-        await _hub.Clients.Group(req.BusinessId.ToString()).SendAsync("tables.updated", cancellationToken: ct);
-        await _hub.Clients.Group(req.BusinessId.ToString()).SendAsync("inventory.updated", cancellationToken: ct);
+        table.UpdatedAt = DateTime.UtcNow;
 
         _ctx.AuditLogs.Add(new AuditLog
         {
@@ -152,17 +141,29 @@ public sealed class OrderBatchService : IOrderBatchService
             Action = "ORDER_BATCH_CREATE",
             EntityType = "Order",
             EntityId = order.Id,
-            DataJson = $"idempotencyKey={idempotencyKey};orderId={order.Id}",
+            DataJson = $"items={req.Items.Count}",
             CreatedAt = DateTime.UtcNow
         });
+
         await _ctx.SaveChangesAsync(ct);
+
+        if (!string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            await _idempotencyKeyStore.SaveAsync(IdempotencyScope, req.BusinessId, req.ActorUserId, idempotencyKey, order.Id, IdempotencyTtl, ct);
+        }
+
+        await tx.CommitAsync(ct);
+
+        await _hub.Clients.Group(req.BusinessId.ToString()).SendAsync("orders.updated", cancellationToken: ct);
+        await _hub.Clients.Group(req.BusinessId.ToString()).SendAsync("tables.updated", cancellationToken: ct);
+        await _hub.Clients.Group(req.BusinessId.ToString()).SendAsync("inventory.updated", cancellationToken: ct);
 
         return new CreateOrderBatchResponse
         {
             OrderId = order.Id,
-            TotalItems = total,
-            KitchenItems = kitchen,
-            BarItems = bar
+            TotalItems = totalItems,
+            KitchenItems = kitchenItems,
+            BarItems = barItems
         };
     }
 }

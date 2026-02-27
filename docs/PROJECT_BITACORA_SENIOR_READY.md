@@ -100,6 +100,7 @@ Entregar un POS robusto y mantenible con:
 13. Endurecimiento de idempotencia en órdenes y turnos.
 14. Extracción de categorías/licencias/negocio público/inventory-movements a servicios + estandarización de errores.
 15. Reducción adicional de orquestación WPF con `IMainWindowSessionOrchestrator`.
+16. Consolidación de almacenamiento de llaves de idempotencia con `IIdempotencyKeyStore` (TTL y compactación).
 
 ---
 
@@ -133,7 +134,7 @@ Entregar un POS robusto y mantenible con:
 
 ### 6.5 Resiliencia
 - Idempotencia básica extendida a pagos, órdenes por lote y aperturas/cierres de turno.
-- Pendiente: política robusta de expiración/almacenamiento de llaves de idempotencia.
+- Política robusta aplicada con `IIdempotencyKeyStore` persistido en auditoría con TTL y compactación periódica.
 
 ### 6.6 Operación y gobernanza
 - Runbook de despliegue/rollback ya creado; falta institucionalizar su uso operativo.

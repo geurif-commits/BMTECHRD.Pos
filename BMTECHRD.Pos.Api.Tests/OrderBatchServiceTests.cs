@@ -1,5 +1,6 @@
 using BMTECHRD.Pos.Api.Common;
 using BMTECHRD.Pos.Api.Hubs;
+using BMTECHRD.Pos.Api.Services.Idempotency;
 using BMTECHRD.Pos.Api.Services.Orders;
 using BMTECHRD.Pos.Application.DTOs;
 using BMTECHRD.Pos.Infrastructure.Persistence;
@@ -29,7 +30,7 @@ public class OrderBatchServiceTests
         await db.SaveChangesAsync();
 
         var hub = new Mock<IHubContext<PosHub>>().Object;
-        var sut = new OrderBatchService(db, hub);
+        var sut = new OrderBatchService(db, hub, new AuditLogIdempotencyKeyStore(db));
 
         var req = new CreateOrderBatchRequest
         {

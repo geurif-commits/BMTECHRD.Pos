@@ -44,4 +44,4 @@
 - [x] Idempotencia básica en pagos de caja vía `Idempotency-Key`.
 - [x] Prueba de carga base inicial (`k6_cashier_smoke.js`).
 - [x] Endurecida idempotencia en operaciones críticas adicionales (`Orders batch`, `Shifts open/close`, `Cashier payments`).
-- [ ] Consolidar almacenamiento/expiración robusta de llaves de idempotencia.
+- [x] Consolidado almacenamiento/expiración robusta de llaves de idempotencia (store dedicado con TTL y compactación).
