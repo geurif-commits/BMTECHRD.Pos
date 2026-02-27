@@ -16,8 +16,10 @@ namespace BMTECHRD.Pos.App
         private readonly LocalDeviceConfigService _configService;
         private readonly IDeviceRolePolicy _deviceRolePolicy;
         private readonly IMainWindowSessionOrchestrator _sessionOrchestrator;
+        private readonly IMainWindowNavigationCoordinator _navigationCoordinator;
         private AuthSessionService? _authSession;
         private SignalRClient? _signalR;
+        private string _baseUrl = "https://localhost:5001/";
 
         private void OnSessionExpired(object? sender, EventArgs e)
         {
@@ -36,9 +38,8 @@ namespace BMTECHRD.Pos.App
                 }
 
                 var api = App.Services.GetService<ApiClient>();
-                var start = new Views.StartView();
-                start.Initialize(api!, _authSession!);
-                Content = start;
+                if (api == null || _authSession == null) return;
+                Content = _navigationCoordinator.BuildStartContent(api, _authSession, OnLoginSuccess);
             });
         }
 
@@ -48,6 +49,7 @@ namespace BMTECHRD.Pos.App
             _configService = new LocalDeviceConfigService();
             _deviceRolePolicy = App.Services.GetService<IDeviceRolePolicy>() ?? new DeviceRolePolicy();
             _sessionOrchestrator = App.Services.GetService<IMainWindowSessionOrchestrator>() ?? new MainWindowSessionOrchestrator();
+            _navigationCoordinator = App.Services.GetService<IMainWindowNavigationCoordinator>() ?? new MainWindowNavigationCoordinator();
         }
 
         public void SetContent(object content)
@@ -79,7 +81,7 @@ namespace BMTECHRD.Pos.App
                 return;
             }
 
-            var baseUrl = GetBaseUrlFromConfigOrDefault(config);
+            _baseUrl = GetBaseUrlFromConfigOrDefault(config);
             var api = (ApiClient?)App.Services.GetService(typeof(ApiClient));
             if (api == null)
             {
@@ -88,37 +90,36 @@ namespace BMTECHRD.Pos.App
                 return;
             }
 
-            var start = new Views.StartView();
-            start.Initialize(api, _authSession);
+            Content = _navigationCoordinator.BuildStartContent(api, _authSession, OnLoginSuccess);
+        }
 
-            start.OnLoginSuccess += session =>
+        private void OnLoginSuccess(SessionModel session)
+        {
+            if (_authSession == null) return;
+
+            _authSession.SetSession(session.AccessToken, session.RefreshToken, session.UserId, session.BusinessId, session.Username, session.Role, session.ExpiresAt);
+            _authSession.SessionExpired -= OnSessionExpired;
+            _authSession.SessionExpired += OnSessionExpired;
+
+            var api = (ApiClient?)App.Services.GetService(typeof(ApiClient));
+            if (api == null) return;
+
+            Task.Run(async () =>
             {
-                _authSession!.SetSession(session.AccessToken, session.RefreshToken, session.UserId, session.BusinessId, session.Username, session.Role, session.ExpiresAt);
+                _signalR = await _sessionOrchestrator.ConnectSignalRAsync(_baseUrl, () => _authSession.AccessToken, session.BusinessId);
+                if (_signalR == null) return;
 
-                _authSession.SessionExpired -= OnSessionExpired;
-                _authSession.SessionExpired += OnSessionExpired;
-
-                Task.Run(async () =>
+                System.Windows.Application.Current.Dispatcher.Invoke(() =>
                 {
-                    _signalR = await _sessionOrchestrator.ConnectSignalRAsync(baseUrl, () => _authSession!.AccessToken, session.BusinessId);
-                    if (_signalR == null) return;
-
-                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                    if (!_deviceRolePolicy.IsRoleAllowedForDeviceMode(_deviceMode, session.Role))
                     {
-                        if (!_deviceRolePolicy.IsRoleAllowedForDeviceMode(_deviceMode, session.Role))
-                        {
-                            var accessDenied = new Views.AccessDeniedView();
-                            accessDenied.Initialize(_signalR, session.BusinessId);
-                            Content = accessDenied;
-                            return;
-                        }
+                        Content = _navigationCoordinator.BuildAccessDeniedContent(_signalR, session.BusinessId);
+                        return;
+                    }
 
-                        Content = _sessionOrchestrator.BuildContentForDeviceMode(_deviceMode, api, _signalR, session);
-                    });
+                    Content = _sessionOrchestrator.BuildContentForDeviceMode(_deviceMode, api, _signalR, session);
                 });
-            };
-
-            Content = start;
+            });
         }
 
         private static string GetBaseUrlFromConfigOrDefault(DeviceConfig config)

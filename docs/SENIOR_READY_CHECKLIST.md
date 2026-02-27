@@ -9,14 +9,14 @@
 - [x] Extraer users/products/tables a servicios dedicados.
 - [x] Extraer categorías/licencias/negocio público a servicios dedicados.
 - [x] Extraer inventory-movements a servicio dedicado.
-- [ ] Extraer resto administrativo pendiente a casos de uso dedicados (si surgen nuevos módulos).
+- [x] Extraídos módulos administrativos residuales detectados en auditoría (`Auth`, `Kitchen`, `Bar`) a servicios dedicados.
 
 ## 2) Error handling estándar
 - [x] Middleware global en formato `ProblemDetails`.
 - [x] Códigos de error de negocio iniciales para órdenes, reportes, turnos, inventario y caja.
 - [x] Helper de claims (`bid`/`sub`) con errores consistentes (`ApiProblemException`).
 - [x] Unificar contrato de error para controladores críticos ya migrados (incluye categorías/licencias/negocio público).
-- [ ] Revisar y cerrar cualquier endpoint residual nuevo que no use el contrato.
+- [x] Cerrados endpoints residuales relevantes al contrato (`Auth`, `Kitchen`, `Bar`) con `ApiProblemException`.
 
 ## 3) Pruebas
 - [x] Tests de auth flow existentes.
@@ -33,7 +33,7 @@
 ## 5) Cliente WPF
 - [x] Extraída política de roles por modo de dispositivo (`DeviceRolePolicy`) fuera de `MainWindow`.
 - [x] Reducida orquestación de `MainWindow` con `IMainWindowSessionOrchestrator`.
-- [ ] Continuar desacople adicional (coordinador de navegación/sesión de mayor alcance).
+- [x] Desacople adicional aplicado con `IMainWindowNavigationCoordinator` para navegación/sesión en `MainWindow`.
 
 ## 6) CI/CD quality gates
 - [x] Pipeline con restore/build/test de solución en Release.

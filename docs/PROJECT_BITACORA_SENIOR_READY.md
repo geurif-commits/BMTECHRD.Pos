@@ -102,6 +102,9 @@ Entregar un POS robusto y mantenible con:
 15. Reducción adicional de orquestación WPF con `IMainWindowSessionOrchestrator`.
 16. Consolidación de almacenamiento de llaves de idempotencia con `IIdempotencyKeyStore` (TTL y compactación).
 17. Expansión de integration tests API+DB para flujos críticos iniciales (`auth login/me/refresh` y `license activate`).
+18. Extracción de `AuthController` a `AuthService` + unificación de contrato de error en auth.
+19. Extracción de `KitchenController`/`BarController` a `ProductionQueueService` + contrato de error consistente.
+20. Desacople adicional WPF con `IMainWindowNavigationCoordinator`.
 
 ---
 
@@ -118,28 +121,28 @@ Entregar un POS robusto y mantenible con:
 ## 6) Qué falta para cerrar “senior-ready”
 
 ### 6.1 Arquitectura
-- Mantener vigilancia sobre nuevos endpoints administrativos para asegurar patrón de servicio desde su creación.
-- Definir convención estable de carpetas por feature (`Services/<Feature>` + contratos).
+- Auditoría actual cerrada: endpoints residuales administrativos (`Auth`, `Kitchen`, `Bar`) migrados a servicios.
+- Convención de carpetas consolidada por feature (`Services/<Feature>` + contratos).
 
 ### 6.2 Contratos de error
-- El contrato de error ya está estandarizado en controladores críticos; validar continuamente endpoints nuevos para no romper consistencia.
-- Definir catálogo de códigos de error por dominio (AUTH, ORDER, SHIFT, INV, CASH, REPORT, USER, TABLE).
+- Contrato de error estandarizado en endpoints críticos y residuales migrados.
+- Catálogo de códigos de error documentado en `docs/ERROR_CODE_CATALOG.md`.
 
 ### 6.3 Testing
 - Integración API expandida en auth/licencia; mantener expansión progresiva a órdenes, pagos/caja, turnos, inventario y users/products/tables.
 - Subir cobertura efectiva más allá del mínimo (meta sugerida: >= 75%).
 
 ### 6.4 WPF
-- Separar coordinación de sesión y SignalR de `MainWindow` hacia un orquestador (`ISessionOrchestrator` / `INavCoordinator`).
-- Mejorar testabilidad de navegación.
+- Coordinación de sesión y navegación separada de `MainWindow` hacia orquestadores (`IMainWindowSessionOrchestrator` + `IMainWindowNavigationCoordinator`).
+- Testabilidad de navegación mejorada al centralizar factories de vistas de inicio/acceso denegado.
 
 ### 6.5 Resiliencia
 - Idempotencia básica extendida a pagos, órdenes por lote y aperturas/cierres de turno.
 - Política robusta aplicada con `IIdempotencyKeyStore` persistido en auditoría con TTL y compactación periódica.
 
 ### 6.6 Operación y gobernanza
-- Runbook de despliegue/rollback ya creado; falta institucionalizar su uso operativo.
-- Definition of Done por PR ya creado; falta institucionalizarlo en revisiones obligatorias.
+- Uso operativo institucionalizado mediante plantilla de PR con checklist DoD obligatorio (`.github/pull_request_template.md`).
+- Definition of Done incorporado como checklist de validación por PR.
 
 ---
 
@@ -171,4 +174,4 @@ Se considera completo cuando:
 - **Arquitectura**: Mid+/Avanzando a Senior (por extracción progresiva a servicios).
 - **Seguridad auth**: Avanzado.
 - **Calidad/CI**: Mid+ con gates iniciales.
-- **Producto completo senior-ready**: en progreso activo, con base sólida.
+- **Producto completo senior-ready**: checklist técnico principal cerrado; mantener evolución continua en cobertura y operación.
