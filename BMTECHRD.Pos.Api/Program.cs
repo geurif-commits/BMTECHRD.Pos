@@ -1,3 +1,4 @@
+using BMTECHRD.Pos.Api.Services.Orders;
 using BMTECHRD.Pos.Api.Hubs;
 using BMTECHRD.Pos.Api.Extensions;
 using BMTECHRD.Pos.Infrastructure;
@@ -11,6 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
+builder.Services.AddScoped<IOrderBatchService, OrderBatchService>();
 
 // Infrastructure (DbContext, Auth services)
 builder.Services.AddInfrastructure(builder.Configuration);
