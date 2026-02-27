@@ -13,5 +13,4 @@ public sealed class Payment : AuditableEntity
     public PaymentMethod Method { get; set; }
     public decimal Amount { get; set; }
     public string? MetaJson { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

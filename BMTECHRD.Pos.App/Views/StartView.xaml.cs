@@ -2,6 +2,7 @@ using System.Windows.Controls;
 using BMTECHRD.Pos.App.Services;
 using BMTECHRD.Pos.App.ViewModels;
 using BMTECHRD.Pos.App.Models;
+using BMTECHRD.Pos.Auth.Core.Services;
 using System.Windows;
 
 namespace BMTECHRD.Pos.App.Views;

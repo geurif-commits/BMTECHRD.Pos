@@ -1,7 +1,5 @@
-using BMTECHRD.Pos.Application.DTOs;
-using BMTECHRD.Pos.Infrastructure.Persistence;
+using BMTECHRD.Pos.Api.Services.Business;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace BMTECHRD.Pos.Api.Controllers;
 
@@ -9,15 +7,17 @@ namespace BMTECHRD.Pos.Api.Controllers;
 [Route("api/business")]
 public sealed class BusinessPublicController : ControllerBase
 {
-    private readonly AppDbContext _ctx;
-    public BusinessPublicController(AppDbContext ctx) => _ctx = ctx;
+    private readonly IBusinessService _businessService;
+
+    public BusinessPublicController(IBusinessService businessService)
+    {
+        _businessService = businessService;
+    }
 
     [HttpGet("public")]
-    public async Task<IActionResult> GetPublic()
+    public async Task<IActionResult> GetPublic(CancellationToken ct)
     {
-        var list = await _ctx.Businesses
-            .Select(b => new BusinessPublicDto { BusinessId = b.Id, Name = b.Name, LogoPath = b.LogoPath })
-            .ToListAsync();
+        var list = await _businessService.GetPublicAsync(ct);
         return Ok(list);
     }
 }

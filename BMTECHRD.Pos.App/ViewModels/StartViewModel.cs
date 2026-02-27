@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using BMTECHRD.Pos.App.Models;
+using BMTECHRD.Pos.App.Services;
 using BMTECHRD.Pos.Auth.Core.Services;
 using System.Windows;
 
