@@ -110,6 +110,7 @@ public partial class App : System.Windows.Application
 
         // Navigation
         services.AddSingleton<INavigationService, NavigationService>();
+        services.AddSingleton<IDeviceRolePolicy, DeviceRolePolicy>();
 
         // ViewModels
         services.AddTransient<LoginViewModel>();
