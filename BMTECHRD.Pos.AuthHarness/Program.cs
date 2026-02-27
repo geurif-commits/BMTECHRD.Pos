@@ -57,17 +57,74 @@ services.AddHttpClient<AuthClient>(c =>
 var provider = services.BuildServiceProvider();
 var logger = provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Program>>();
 
-// Run scenarios sequentially
-await Scenario_RefreshOk(provider, logger);
-await Scenario_RefreshFail(provider, logger);
-await Scenario_Concurrency(provider, logger);
-await Scenario_RefreshReuseDetected(provider, logger);
-await Scenario_RefreshReuseDetected_Concurrency(provider, logger);
+var ciMode = args is not null && args.Length > 0 && Array.Exists(args, a => a?.Equals("--ci", StringComparison.OrdinalIgnoreCase) == true);
 
-Console.WriteLine("All scenarios finished.");
+var report = new HarnessReport();
+
+// Run scenarios sequentially and collect results
+report.AddResult(await RunScenarioAsync("S1: Refresh OK", () => Scenario_RefreshOk(provider, logger)));
+report.AddResult(await RunScenarioAsync("S2: Refresh FAIL", () => Scenario_RefreshFail(provider, logger)));
+report.AddResult(await RunScenarioAsync("S3: Concurrency", () => Scenario_Concurrency(provider, logger)));
+report.AddResult(await RunScenarioAsync("S4: Refresh reuse detected", () => Scenario_RefreshReuseDetected(provider, logger)));
+report.AddResult(await RunScenarioAsync("S4b: Concurrency + reuse", () => Scenario_RefreshReuseDetected_Concurrency(provider, logger)));
+
+// aggregate metrics
+report.TotalRefreshCalls = report.Results.Sum(r => r.RefreshCalls);
+report.SessionExpiredEvents = report.Results.Sum(r => r.SessionExpiredEvents);
+
+// Print summary
+PrintReport(report);
+
+Environment.ExitCode = report.AllPassed ? 0 : 1;
+if (!report.AllPassed && ciMode)
+{
+    // in CI mode, exit immediately with non-zero
+    return;
+}
+
+// helper to run and capture scenario results with exception handling
+static async Task<ScenarioResult> RunScenarioAsync(string name, Func<Task<ScenarioResult>> scenario)
+{
+    var sw = System.Diagnostics.Stopwatch.StartNew();
+    var result = new ScenarioResult { Name = name };
+    try
+    {
+        var r = await scenario();
+        sw.Stop();
+        r.Duration = sw.Elapsed;
+        return r;
+    }
+    catch (Exception ex)
+    {
+        sw.Stop();
+        result.Passed = false;
+        result.Error = ex.ToString();
+        result.Duration = sw.Elapsed;
+        return result;
+    }
+}
+
+static void PrintReport(HarnessReport report)
+{
+    Console.WriteLine("\n========== AUTH HARNESS REPORT ==========");
+    foreach (var r in report.Results)
+    {
+        Console.WriteLine($"{(r.Passed ? "PASS" : "FAIL")} | {r.Name} | {r.Duration.TotalMilliseconds:N0} ms | refresh={r.RefreshCalls} | sessionExpired={r.SessionExpiredEvents}");
+        if (!r.Passed && !string.IsNullOrEmpty(r.Error))
+        {
+            Console.WriteLine(r.Error);
+        }
+    }
+    Console.WriteLine("-----------------------------------------");
+    Console.WriteLine($"RefreshCallsTotal: {report.TotalRefreshCalls}");
+    Console.WriteLine($"SessionExpiredEvents: {report.SessionExpiredEvents}");
+    Console.WriteLine($"Failed: {report.FailedCount}");
+    Console.WriteLine($"ExitCode: {(report.AllPassed ? 0 : 1)}");
+    Console.WriteLine("=========================================");
+}
 
 // Scenario implementations
-async Task Scenario_RefreshOk(ServiceProvider sp, Microsoft.Extensions.Logging.ILogger logger)
+async Task<ScenarioResult> Scenario_RefreshOk(ServiceProvider sp, Microsoft.Extensions.Logging.ILogger logger)
 {
     Console.WriteLine("\n=== Scenario 1: Refresh OK ===");
     var sim = new HarnessSimState();
@@ -92,16 +149,33 @@ async Task Scenario_RefreshOk(ServiceProvider sp, Microsoft.Extensions.Logging.I
     using var prov = sc.BuildServiceProvider();
 
     var session = prov.GetRequiredService<AuthSessionService>();
+    int sessionExpiredCount = 0;
+    session.SessionExpired += (_, _) => sessionExpiredCount++;
     // seed expired access token, valid refresh
     session.SetSession("expired", "valid-refresh", Guid.NewGuid(), Guid.NewGuid(), "u", "ADMIN", DateTime.UtcNow.AddMinutes(-10));
 
     var api = prov.GetRequiredService<ApiClient>();
 
+    var sw = System.Diagnostics.Stopwatch.StartNew();
     // call protected endpoint
     Console.WriteLine("Calling protected endpoint...");
     var tables = await api.GetTablesAsync(Guid.NewGuid());
+    sw.Stop();
+
+    var passed = sim.RefreshAttempts == 1 && sessionExpiredCount == 0;
+    var result = new ScenarioResult
+    {
+        Name = "S1: Refresh OK",
+        Passed = passed,
+        Duration = sw.Elapsed,
+        RefreshCalls = sim.RefreshAttempts,
+        SessionExpiredEvents = sessionExpiredCount
+    };
+
+    if (!passed) result.Error = "Expected exactly 1 refresh attempt and 0 SessionExpired events.";
     Console.WriteLine($"Refresh attempted: {sim.RefreshAttempts}");
-    Console.WriteLine("Retry succeeded");
+    Console.WriteLine(passed ? "Retry succeeded" : "FAILED");
+    return result;
 }
 
 async Task Scenario_RefreshFail(ServiceProvider sp, Microsoft.Extensions.Logging.ILogger logger)
@@ -125,18 +199,32 @@ async Task Scenario_RefreshFail(ServiceProvider sp, Microsoft.Extensions.Logging
 
     using var prov = sc.BuildServiceProvider();
     var session = prov.GetRequiredService<AuthSessionService>();
-    bool sessionExpiredFired = false;
-    session.SessionExpired += (_, _) => sessionExpiredFired = true;
+    int sessionExpiredFired = 0;
+    session.SessionExpired += (_, _) => sessionExpiredFired++;
 
     session.SetSession("expired", "invalid-refresh", Guid.NewGuid(), Guid.NewGuid(), "u", "ADMIN", DateTime.UtcNow.AddMinutes(-10));
 
     var api = prov.GetRequiredService<ApiClient>();
 
+    var sw = System.Diagnostics.Stopwatch.StartNew();
     Console.WriteLine("Calling protected endpoint (expect refresh fail)...");
     var tables = await api.GetTablesAsync(Guid.NewGuid());
+    sw.Stop();
+
+    var passed = sim.RefreshAttempts == 1 && sessionExpiredFired == 1;
+    var result = new ScenarioResult
+    {
+        Name = "S2: Refresh FAIL",
+        Passed = passed,
+        Duration = sw.Elapsed,
+        RefreshCalls = sim.RefreshAttempts,
+        SessionExpiredEvents = sessionExpiredFired
+    };
+    if (!passed) result.Error = "Expected 1 refresh attempt and SessionExpired to fire exactly once.";
 
     Console.WriteLine($"Refresh attempted: {sim.RefreshAttempts}");
     Console.WriteLine($"SessionExpired fired: {sessionExpiredFired}");
+    return result;
 }
 
 async Task Scenario_Concurrency(ServiceProvider sp, Microsoft.Extensions.Logging.ILogger logger)
@@ -166,6 +254,10 @@ async Task Scenario_Concurrency(ServiceProvider sp, Microsoft.Extensions.Logging
 
     var api = prov.GetRequiredService<ApiClient>();
 
+    int sessionExpiredCount = 0;
+    session.SessionExpired += (_, _) => sessionExpiredCount++;
+
+    var sw = System.Diagnostics.Stopwatch.StartNew();
     // run 10 concurrent requests
     var tasks = new Task<int>[10];
     for (int i = 0; i < 10; i++)
@@ -177,12 +269,26 @@ async Task Scenario_Concurrency(ServiceProvider sp, Microsoft.Extensions.Logging
         });
     }
     var results = await Task.WhenAll(tasks);
+    sw.Stop();
+
+    var passed = sim.RefreshAttempts == 1 && results.Length == 10;
+    var result = new ScenarioResult
+    {
+        Name = "S3: Concurrency",
+        Passed = passed,
+        Duration = sw.Elapsed,
+        RefreshCalls = sim.RefreshAttempts,
+        SessionExpiredEvents = sessionExpiredCount
+    };
+    if (!passed) result.Error = "Expected single refresh attempt and all requests to complete.";
+
     Console.WriteLine($"Refresh attempted: {sim.RefreshAttempts}");
     Console.WriteLine($"All requests succeeded: {results.Length}/10");
+    return result;
 }
 
 // S4: Reuse / rotation mismatch -> should clear session and emit SessionExpired once
-async Task Scenario_RefreshReuseDetected(ServiceProvider sp, Microsoft.Extensions.Logging.ILogger logger)
+async Task<ScenarioResult> Scenario_RefreshReuseDetected(ServiceProvider sp, Microsoft.Extensions.Logging.ILogger logger)
 {
     Console.WriteLine("\n=== Scenario S4: Refresh reuse detected (403) ===");
     var sim = new HarnessSimState();
@@ -208,16 +314,29 @@ async Task Scenario_RefreshReuseDetected(ServiceProvider sp, Microsoft.Extension
     session.SetSession("expired", "reused_refresh", Guid.NewGuid(), Guid.NewGuid(), "u", "ADMIN", DateTime.UtcNow.AddMinutes(-10));
 
     var api = prov.GetRequiredService<ApiClient>();
-
+    var sw = System.Diagnostics.Stopwatch.StartNew();
     Console.WriteLine("Calling protected endpoint (expect refresh reuse -> session expired)...");
     var tables = await api.GetTablesAsync(Guid.NewGuid());
+    sw.Stop();
+
+    var passed = sim.RefreshAttempts == 1 && sessionExpiredCount == 1;
+    var result = new ScenarioResult
+    {
+        Name = "S4: Refresh reuse detected",
+        Passed = passed,
+        Duration = sw.Elapsed,
+        RefreshCalls = sim.RefreshAttempts,
+        SessionExpiredEvents = sessionExpiredCount
+    };
+    if (!passed) result.Error = "Expected 1 refresh attempt and SessionExpired to fire once.";
 
     Console.WriteLine($"Refresh attempted: {sim.RefreshAttempts}");
     Console.WriteLine($"SessionExpired fired: {sessionExpiredCount}");
+    return result;
 }
 
 // S4b: concurrency with reused refresh token
-async Task Scenario_RefreshReuseDetected_Concurrency(ServiceProvider sp, Microsoft.Extensions.Logging.ILogger logger)
+async Task<ScenarioResult> Scenario_RefreshReuseDetected_Concurrency(ServiceProvider sp, Microsoft.Extensions.Logging.ILogger logger)
 {
     Console.WriteLine("\n=== Scenario S4b: Concurrency + refresh reuse detected ===");
     var sim = new HarnessSimState();
@@ -254,14 +373,25 @@ async Task Scenario_RefreshReuseDetected_Concurrency(ServiceProvider sp, Microso
         });
     }
 
+    var sw = System.Diagnostics.Stopwatch.StartNew();
     var results = await Task.WhenAll(tasks);
+    sw.Stop();
+
+    var passed = sim.RefreshAttempts == 1 && sessionExpiredCount == 1;
+    var result = new ScenarioResult
+    {
+        Name = "S4b: Concurrency + reuse",
+        Passed = passed,
+        Duration = sw.Elapsed,
+        RefreshCalls = sim.RefreshAttempts,
+        SessionExpiredEvents = sessionExpiredCount
+    };
+    if (!passed) result.Error = "Expected 1 refresh attempt and SessionExpired to fire once under concurrency.";
+
     Console.WriteLine($"Refresh attempted: {sim.RefreshAttempts}");
     Console.WriteLine($"SessionExpired fired: {sessionExpiredCount}");
     Console.WriteLine($"All requests completed: {results.Length}/10");
-}
-    var results = await Task.WhenAll(tasks);
-    Console.WriteLine($"Refresh attempted: {sim.RefreshAttempts}");
-    Console.WriteLine($"All requests succeeded: {results.Length}/10");
+    return result;
 }
 
 // Helpers for harness
