@@ -14,6 +14,5 @@ public sealed class Bill : AuditableEntity
     public decimal Total { get; set; }
 
     public string Status { get; set; } = "OPEN";
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ClosedAt { get; set; }
 }

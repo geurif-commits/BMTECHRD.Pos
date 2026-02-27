@@ -1,3 +1,18 @@
+using BMTECHRD.Pos.Api.Services.Orders;
+using BMTECHRD.Pos.Api.Services.Reports;
+using BMTECHRD.Pos.Api.Services.Inventory;
+using BMTECHRD.Pos.Api.Services.Shifts;
+using BMTECHRD.Pos.Api.Services.Cashier;
+using BMTECHRD.Pos.Api.Services.Products;
+using BMTECHRD.Pos.Api.Services.Tables;
+using BMTECHRD.Pos.Api.Services.Users;
+using BMTECHRD.Pos.Api.Services.Business;
+using BMTECHRD.Pos.Api.Services.InventoryMovements;
+using BMTECHRD.Pos.Api.Services.License;
+using BMTECHRD.Pos.Api.Services.Categories;
+using BMTECHRD.Pos.Api.Services.Auth;
+using BMTECHRD.Pos.Api.Services.Idempotency;
+using BMTECHRD.Pos.Api.Services.Production;
 using BMTECHRD.Pos.Api.Hubs;
 using BMTECHRD.Pos.Api.Extensions;
 using BMTECHRD.Pos.Infrastructure;
@@ -11,6 +26,21 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
+builder.Services.AddScoped<IOrderBatchService, OrderBatchService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IReportsService, ReportsService>();
+builder.Services.AddScoped<IShiftService, ShiftService>();
+builder.Services.AddScoped<IInventoryService, InventoryService>();
+builder.Services.AddScoped<ICashierService, CashierService>();
+builder.Services.AddScoped<IUsersService, UsersService>();
+builder.Services.AddScoped<ITablesService, TablesService>();
+builder.Services.AddScoped<IProductsService, ProductsService>();
+builder.Services.AddScoped<ICategoriesService, CategoriesService>();
+builder.Services.AddScoped<ILicenseActivationService, LicenseActivationService>();
+builder.Services.AddScoped<IBusinessService, BusinessService>();
+builder.Services.AddScoped<IInventoryMovementsService, InventoryMovementsService>();
+builder.Services.AddScoped<IIdempotencyKeyStore, AuditLogIdempotencyKeyStore>();
+builder.Services.AddScoped<IProductionQueueService, ProductionQueueService>();
 
 // Infrastructure (DbContext, Auth services)
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -171,3 +201,4 @@ app.MapControllers();
 app.MapHub<PosHub>("/hubs/pos");
 
 app.Run();
+public partial class Program { }
