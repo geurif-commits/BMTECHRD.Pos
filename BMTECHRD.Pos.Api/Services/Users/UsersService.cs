@@ -80,7 +80,8 @@ public sealed class UsersService : IUsersService
         if (!Enum.TryParse<UserRole>(req.Role, true, out var newRole))
             throw new ApiProblemException(StatusCodes.Status400BadRequest, "Invalid role", "Invalid role", "USER_ROLE_INVALID");
 
-        if (actor!.Role == UserRole.SUPERVISOR && user.Role == UserRole.ADMIN && newRole != UserRole.ADMIN)
+        var actorRole = actor?.Role;
+        if (actorRole == UserRole.SUPERVISOR && user.Role == UserRole.ADMIN && newRole != UserRole.ADMIN)
             throw new ApiProblemException(StatusCodes.Status403Forbidden, "Forbidden", "Supervisor cannot demote admin", "USER_DEMOTE_FORBIDDEN");
 
         if (!req.IsActive && user.Role == UserRole.ADMIN)

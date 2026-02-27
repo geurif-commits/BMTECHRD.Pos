@@ -85,7 +85,6 @@ public sealed class CashierViewModel : ViewModelBase
 
         _signalR.OnTablesUpdated += async () => await RefreshAsync();
         _signalR.OnInventoryUpdated += async () => await RefreshAsync();
-        _signalR.OnTablesUpdated += async () => await RefreshAsync();
 
         // load current shift on startup
         _ = LoadShiftAsync();
@@ -108,7 +107,7 @@ public sealed class CashierViewModel : ViewModelBase
             }
             OnPropertyChanged(nameof(ShiftLabel));
         }
-        catch { /* ignore */ }
+        catch (Exception ex) { Error = ex.Message; }
     }
 
     private async Task OpenShiftAsync()
@@ -136,7 +135,7 @@ public sealed class CashierViewModel : ViewModelBase
         {
             IsBusy = true; Error = null;
             var req = new CloseShiftRequest { BusinessId = _businessId, UserId = _actorUserId, ShiftId = ActiveShiftId.Value, ClosingCash = 0m };
-            var resp = await _api.CloseShiftAsync(req);
+            await _api.CloseShiftAsync(req);
             // clear
             ActiveShiftId = null;
             ShiftLabel = null;

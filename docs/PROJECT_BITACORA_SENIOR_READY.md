@@ -107,6 +107,7 @@ Entregar un POS robusto y mantenible con:
 20. Desacople adicional WPF con `IMainWindowNavigationCoordinator`.
 21. Preparación de baseline de análisis estático (analyzers + dotnet format + gates en CI).
 22. Formalización del cierre de ciclo senior-ready (`docs/CIERRE_CICLO_SENIOR_READY.md`).
+23. Ejecución de Análisis Estático Fase 1 (top 20, priorización por riesgo y lote A de correcciones).
 
 ---
 
@@ -149,7 +150,8 @@ Entregar un POS robusto y mantenible con:
 ### 6.7 Análisis estático
 - Baseline habilitado con analizadores de .NET (`Directory.Build.props`) y severidades base en `.editorconfig`.
 - CI ejecuta análisis estático (Roslyn + `dotnet format` analyzers) para prevenir regresiones de calidad.
-- Próxima fase: remediación incremental de hallazgos y elevación progresiva de severidades.
+- Fase 1 ejecutada: top 20 hallazgos priorizados + lote A de correcciones (`docs/STATIC_ANALYSIS_PHASE1_REPORT.md`).
+- Próxima fase: remediación incremental de lotes B/C y elevación progresiva de severidades.
 
 ---
 

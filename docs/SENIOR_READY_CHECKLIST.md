@@ -57,3 +57,9 @@
 - [x] Plan senior-ready de implementación cerrado para la fase actual.
 - [x] Documento formal de cierre emitido (`docs/CIERRE_CICLO_SENIOR_READY.md`).
 - [x] Preparado handoff para fase siguiente (análisis estático profundo).
+
+
+## 10) Análisis estático profundo (Fase 1)
+- [x] Top 20 hallazgos priorizados por riesgo documentados (`docs/STATIC_ANALYSIS_PHASE1_REPORT.md`).
+- [x] Lote A de corrección aplicado (null-safety + catches silenciosos + cleanup de eventos/variables).
+- [x] Lotes B/C definidos para iteraciones siguientes.

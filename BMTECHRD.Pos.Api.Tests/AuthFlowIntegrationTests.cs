@@ -95,7 +95,10 @@ public sealed class AuthFlowIntegrationTests : IClassFixture<WebApplicationFacto
         Assert.Equal(HttpStatusCode.OK, businessResp.StatusCode);
 
         using var businessDoc = JsonDocument.Parse(await businessResp.Content.ReadAsStringAsync());
-        var first = businessDoc.RootElement.EnumerateArray().First();
+        var first = businessDoc.RootElement.EnumerateArray().FirstOrDefault();
+        if (first.ValueKind == JsonValueKind.Undefined)
+            throw new InvalidOperationException("No public business found for integration test setup.");
+
         return first.GetProperty("businessId").GetGuid();
     }
 }
