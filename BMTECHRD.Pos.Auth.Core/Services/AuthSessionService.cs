@@ -17,7 +17,7 @@ public sealed class AuthSessionService
 
     // DeviceId persistente (por equipo)
     private readonly string _deviceIdFilePath;
-    private string _deviceId;
+    private readonly string _deviceId;
 
     public AuthSessionService()
     {
@@ -37,7 +37,7 @@ public sealed class AuthSessionService
 
     public bool IsAuthenticated => !string.IsNullOrWhiteSpace(_accessToken) && _userId != Guid.Empty;
 
-    public bool IsAccessTokenExpiring => DateTime.UtcNow.AddMinutes(5) >= _expiresAt;
+    public bool IsAccessTokenExpiring => _expiresAt != DateTime.MinValue && DateTime.UtcNow.AddMinutes(5) >= _expiresAt;
 
     public void SetSession(
         string accessToken,
