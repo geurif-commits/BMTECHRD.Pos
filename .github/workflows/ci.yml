@@ -17,13 +17,34 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Restore
-        run: dotnet restore
+        run: dotnet restore BMTECHRD.Pos.slnx
 
-      - name: Build
-        run: dotnet build -c Release --no-restore
+      - name: Build (Release)
+        run: dotnet build BMTECHRD.Pos.slnx -c Release --no-restore
 
-      - name: Test (AuthHarness)
-        run: dotnet test BMTECHRD.Pos.AuthHarness.Tests/BMTECHRD.Pos.AuthHarness.Tests.csproj -c Release --no-build --logger "trx;LogFileName=authharness.trx"
+      - name: Test + Coverage (Solution)
+        run: >
+          dotnet test BMTECHRD.Pos.slnx
+          -c Release
+          --no-build
+          --logger "trx;LogFileName=authharness.trx"
+          --collect:"XPlat Code Coverage"
+
+      - name: Enforce coverage threshold
+        shell: pwsh
+        run: |
+          $coverageFile = Get-ChildItem -Path . -Recurse -Filter *cobertura.xml | Select-Object -First 1
+          if (-not $coverageFile) { throw "Coverage file not found (cobertura.xml)." }
+
+          [xml]$xml = Get-Content $coverageFile.FullName
+          $lineRate = [double]$xml.coverage.'line-rate'
+          $percent = [math]::Round($lineRate * 100, 2)
+
+          Write-Host "Line coverage: $percent%"
+
+          if ($percent -lt 60) {
+            throw "Coverage gate failed. Minimum required: 60%. Actual: $percent%."
+          }
 
       - name: Upload test results
         if: always()
@@ -32,6 +53,15 @@ jobs:
           name: test-results
           path: |
             **/*.trx
+
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: |
+            **/TestResults/**/coverage.cobertura.xml
+            **/TestResults/**/cobertura.xml
 
       - name: Upload auth logs (if any)
         if: always()

@@ -1,11 +1,11 @@
 ﻿using BMTECHRD.Pos.Auth.Core.Services;
 using BMTECHRD.Pos.Application.DTOs;
+using BMTECHRD.Pos.App.Services;
 using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Input;
-using System.Windows.Navigation;
 
 namespace BMTECHRD.Pos.App.ViewModels.Auth;
 
