@@ -18,7 +18,8 @@ public sealed class OrdersController : ControllerBase
     [HttpPost("batch")]
     public async Task<IActionResult> CreateBatch([FromBody] CreateOrderBatchRequest req, CancellationToken ct)
     {
-        var resp = await _orderBatchService.CreateBatchAsync(req, ct);
+        Request.Headers.TryGetValue("Idempotency-Key", out var key);
+        var resp = await _orderBatchService.CreateBatchAsync(req, key.FirstOrDefault(), ct);
         return Ok(resp);
     }
 }

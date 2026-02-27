@@ -1,7 +1,7 @@
-using BMTECHRD.Pos.Api.Common;
 using BMTECHRD.Pos.Api.Hubs;
 using BMTECHRD.Pos.Api.Services.Orders;
 using BMTECHRD.Pos.Application.DTOs;
+using BMTECHRD.Pos.Domain.Enums;
 using BMTECHRD.Pos.Infrastructure.Persistence;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -10,22 +10,38 @@ using Xunit;
 
 namespace BMTECHRD.Pos.Api.Tests;
 
-public class OrderBatchServiceTests
+public class OrderBatchIdempotencyTests
 {
     [Fact]
-    public async Task CreateBatchAsync_WhenNoItems_ThrowsApiProblemException()
+    public async Task CreateBatchAsync_WithSameIdempotencyKey_DoesNotDuplicateOrder()
     {
-        var db = CreateDbContext();
+        await using var db = CreateDbContext();
         var businessId = Guid.NewGuid();
         var tableId = Guid.NewGuid();
+        var productId = Guid.NewGuid();
+        var actorUserId = Guid.NewGuid();
 
         db.Tables.Add(new BMTECHRD.Pos.Domain.Entities.Table
         {
             Id = tableId,
             BusinessId = businessId,
             Number = 1,
-            Status = BMTECHRD.Pos.Domain.Enums.TableStatus.OPEN
+            Status = TableStatus.OPEN
         });
+
+        db.Products.Add(new BMTECHRD.Pos.Domain.Entities.Product
+        {
+            Id = productId,
+            BusinessId = businessId,
+            CategoryId = Guid.NewGuid(),
+            Name = "Cafe",
+            Price = 100,
+            Stock = 10,
+            TrackInventory = true,
+            Area = ProductionArea.BAR,
+            IsActive = true
+        });
+
         await db.SaveChangesAsync();
 
         var hub = new Mock<IHubContext<PosHub>>().Object;
@@ -35,14 +51,17 @@ public class OrderBatchServiceTests
         {
             BusinessId = businessId,
             TableId = tableId,
-            ActorUserId = Guid.NewGuid(),
-            Items = new List<CreateOrderBatchLine>()
+            ActorUserId = actorUserId,
+            Items = new List<CreateOrderBatchLine>
+            {
+                new() { ProductId = productId, Quantity = 1 }
+            }
         };
 
-        var ex = await Assert.ThrowsAsync<ApiProblemException>(() => sut.CreateBatchAsync(req, null, CancellationToken.None));
+        await sut.CreateBatchAsync(req, "idem-order-1", CancellationToken.None);
+        await sut.CreateBatchAsync(req, "idem-order-1", CancellationToken.None);
 
-        Assert.Equal("ORDER_EMPTY", ex.ErrorCode);
-        Assert.Equal(400, ex.StatusCode);
+        Assert.Equal(1, await db.Orders.CountAsync());
     }
 
     private static AppDbContext CreateDbContext()
@@ -50,7 +69,6 @@ public class OrderBatchServiceTests
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
-
         return new AppDbContext(options);
     }
 }

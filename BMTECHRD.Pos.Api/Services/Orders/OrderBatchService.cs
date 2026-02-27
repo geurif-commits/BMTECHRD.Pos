@@ -20,9 +20,42 @@ public sealed class OrderBatchService : IOrderBatchService
         _hub = hub;
     }
 
-    public async Task<CreateOrderBatchResponse> CreateBatchAsync(CreateOrderBatchRequest req, CancellationToken ct)
+    public async Task<CreateOrderBatchResponse> CreateBatchAsync(CreateOrderBatchRequest req, string? idempotencyKey, CancellationToken ct)
     {
-        var table = await _ctx.Tables.FindAsync(new object?[] { req.TableId }, ct);
+
+        if (!string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            var replay = await _ctx.AuditLogs.AsNoTracking()
+                .Where(a => a.BusinessId == req.BusinessId && a.ActorUserId == req.ActorUserId && a.Action == "ORDER_BATCH_CREATE" && a.DataJson != null && a.DataJson.Contains(idempotencyKey))
+                .OrderByDescending(a => a.CreatedAt)
+                .FirstOrDefaultAsync(ct);
+
+            if (replay != null)
+            {
+                var data = replay.DataJson ?? string.Empty;
+                var marker = "orderId=";
+                var idx = data.IndexOf(marker, StringComparison.Ordinal);
+                if (idx >= 0)
+                {
+                    var start = idx + marker.Length;
+                    var end = data.IndexOf(';', start);
+                    var idText = end > start ? data[start..end] : data[start..];
+                    if (Guid.TryParse(idText, out var existingOrderId))
+                    {
+                        var existingItems = await _ctx.OrderItems.AsNoTracking().Where(oi => oi.OrderId == existingOrderId).ToListAsync(ct);
+                        return new CreateOrderBatchResponse
+                        {
+                            OrderId = existingOrderId,
+                            TotalItems = existingItems.Sum(i => i.Quantity),
+                            KitchenItems = existingItems.Where(i => i.Area == ProductionArea.KITCHEN).Sum(i => i.Quantity),
+                            BarItems = existingItems.Where(i => i.Area == ProductionArea.BAR).Sum(i => i.Quantity)
+                        };
+                    }
+                }
+            }
+        }
+
+                var table = await _ctx.Tables.FindAsync(new object?[] { req.TableId }, ct);
         if (table == null || table.BusinessId != req.BusinessId)
             throw new ApiProblemException(400, "Table not found", "Table not found for business", "ORDER_TABLE_NOT_FOUND");
 
@@ -110,6 +143,19 @@ public sealed class OrderBatchService : IOrderBatchService
         if (bar > 0) await _hub.Clients.Group(req.BusinessId.ToString()).SendAsync("bar.queue.updated", cancellationToken: ct);
         await _hub.Clients.Group(req.BusinessId.ToString()).SendAsync("tables.updated", cancellationToken: ct);
         await _hub.Clients.Group(req.BusinessId.ToString()).SendAsync("inventory.updated", cancellationToken: ct);
+
+        _ctx.AuditLogs.Add(new AuditLog
+        {
+            Id = Guid.NewGuid(),
+            BusinessId = req.BusinessId,
+            ActorUserId = req.ActorUserId,
+            Action = "ORDER_BATCH_CREATE",
+            EntityType = "Order",
+            EntityId = order.Id,
+            DataJson = $"idempotencyKey={idempotencyKey};orderId={order.Id}",
+            CreatedAt = DateTime.UtcNow
+        });
+        await _ctx.SaveChangesAsync(ct);
 
         return new CreateOrderBatchResponse
         {

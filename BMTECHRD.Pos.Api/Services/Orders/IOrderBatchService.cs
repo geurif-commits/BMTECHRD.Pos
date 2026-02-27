@@ -4,5 +4,5 @@ namespace BMTECHRD.Pos.Api.Services.Orders;
 
 public interface IOrderBatchService
 {
-    Task<CreateOrderBatchResponse> CreateBatchAsync(CreateOrderBatchRequest req, CancellationToken ct);
+    Task<CreateOrderBatchResponse> CreateBatchAsync(CreateOrderBatchRequest req, string? idempotencyKey, CancellationToken ct);
 }

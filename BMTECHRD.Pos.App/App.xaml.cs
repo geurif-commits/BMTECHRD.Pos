@@ -111,6 +111,7 @@ public partial class App : System.Windows.Application
         // Navigation
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<IDeviceRolePolicy, DeviceRolePolicy>();
+        services.AddSingleton<IMainWindowSessionOrchestrator, MainWindowSessionOrchestrator>();
 
         // ViewModels
         services.AddTransient<LoginViewModel>();

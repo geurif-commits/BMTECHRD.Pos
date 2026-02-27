@@ -7,17 +7,20 @@
 - [x] Extraer inventario a servicio dedicado (`InventoryService`).
 - [x] Extraer caja/pagos a servicio dedicado (`CashierService`).
 - [x] Extraer users/products/tables a servicios dedicados.
-- [ ] Extraer categorías/licencias/negocio público/resto administrativo a casos de uso dedicados.
+- [x] Extraer categorías/licencias/negocio público a servicios dedicados.
+- [x] Extraer inventory-movements a servicio dedicado.
+- [ ] Extraer resto administrativo pendiente a casos de uso dedicados (si surgen nuevos módulos).
 
 ## 2) Error handling estándar
 - [x] Middleware global en formato `ProblemDetails`.
 - [x] Códigos de error de negocio iniciales para órdenes, reportes, turnos, inventario y caja.
 - [x] Helper de claims (`bid`/`sub`) con errores consistentes (`ApiProblemException`).
-- [ ] Unificar todos los controladores restantes al mismo contrato de error (categorías/licencias/negocio público y restantes).
+- [x] Unificar contrato de error para controladores críticos ya migrados (incluye categorías/licencias/negocio público).
+- [ ] Revisar y cerrar cualquier endpoint residual nuevo que no use el contrato.
 
 ## 3) Pruebas
 - [x] Tests de auth flow existentes.
-- [x] Nuevos unit tests de servicios (`OrderBatchService`, `ReportsService`, `ShiftService`, `InventoryService`, `CashierService`).
+- [x] Nuevos unit tests de servicios (`OrderBatchService`, `ReportsService`, `ShiftService`, `InventoryService`, `CashierService`, `UsersService`, `ProductsService`, `TablesService`, `CategoriesService`, `LicenseActivationService`, `BusinessService`, `InventoryMovementsService`, `OrderBatchIdempotency`, `ShiftIdempotency`).
 - [x] Integration tests API+DB iniciales (smoke endpoint API con `WebApplicationFactory`).
 
 ## 4) Documentación operativa
@@ -29,7 +32,8 @@
 
 ## 5) Cliente WPF
 - [x] Extraída política de roles por modo de dispositivo (`DeviceRolePolicy`) fuera de `MainWindow`.
-- [ ] Seguir reduciendo orquestación de sesión/navegación/SignalR de `MainWindow`.
+- [x] Reducida orquestación de `MainWindow` con `IMainWindowSessionOrchestrator`.
+- [ ] Continuar desacople adicional (coordinador de navegación/sesión de mayor alcance).
 
 ## 6) CI/CD quality gates
 - [x] Pipeline con restore/build/test de solución en Release.
@@ -39,4 +43,5 @@
 ## 7) Resiliencia/performance
 - [x] Idempotencia básica en pagos de caja vía `Idempotency-Key`.
 - [x] Prueba de carga base inicial (`k6_cashier_smoke.js`).
-- [ ] Endurecer idempotencia para más operaciones críticas (cierres/órdenes).
+- [x] Endurecida idempotencia en operaciones críticas adicionales (`Orders batch`, `Shifts open/close`, `Cashier payments`).
+- [ ] Consolidar almacenamiento/expiración robusta de llaves de idempotencia.

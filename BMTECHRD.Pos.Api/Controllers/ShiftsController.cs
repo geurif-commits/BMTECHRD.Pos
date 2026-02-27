@@ -40,14 +40,16 @@ public sealed class ShiftsController : ControllerBase
     [HttpPost("open")]
     public async Task<IActionResult> Open([FromBody] CreateShiftRequest req, CancellationToken ct)
     {
-        var resp = await _shiftService.OpenAsync(req, ct);
+        Request.Headers.TryGetValue("Idempotency-Key", out var openKey);
+        var resp = await _shiftService.OpenAsync(req, openKey.FirstOrDefault(), ct);
         return Ok(resp);
     }
 
     [HttpPost("close")]
     public async Task<IActionResult> Close([FromBody] CloseShiftRequest req, CancellationToken ct)
     {
-        var resp = await _shiftService.CloseAsync(req, ct);
+        Request.Headers.TryGetValue("Idempotency-Key", out var closeKey);
+        var resp = await _shiftService.CloseAsync(req, closeKey.FirstOrDefault(), ct);
         return Ok(resp);
     }
 

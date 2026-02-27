@@ -89,8 +89,24 @@ public sealed class ShiftService : IShiftService
         }).ToList();
     }
 
-    public async Task<CreateShiftResponse> OpenAsync(CreateShiftRequest req, CancellationToken ct)
+    public async Task<CreateShiftResponse> OpenAsync(CreateShiftRequest req, string? idempotencyKey, CancellationToken ct)
     {
+
+        if (!string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            var replay = await _ctx.AuditLogs.AsNoTracking()
+                .Where(a => a.BusinessId == req.BusinessId && a.ActorUserId == req.UserId && a.Action == "SHIFT_OPEN" && a.DataJson != null && a.DataJson.Contains(idempotencyKey))
+                .OrderByDescending(a => a.CreatedAt)
+                .FirstOrDefaultAsync(ct);
+
+            if (replay != null && replay.EntityId != Guid.Empty)
+            {
+                var previous = await _ctx.Shifts.AsNoTracking().FirstOrDefaultAsync(s => s.Id == replay.EntityId, ct);
+                if (previous != null)
+                    return new CreateShiftResponse { ShiftId = previous.Id, OpenedAt = previous.OpenedAt };
+            }
+        }
+
         var existing = await _ctx.Shifts.AnyAsync(s => s.UserId == req.UserId && s.Status == "OPEN", ct);
         if (existing)
             throw new ApiProblemException(StatusCodes.Status409Conflict, "Shift conflict", "A shift is already open for this user", "SHIFT_ALREADY_OPEN");
@@ -107,6 +123,18 @@ public sealed class ShiftService : IShiftService
         };
 
         _ctx.Shifts.Add(shift);
+        _ctx.AuditLogs.Add(new BMTECHRD.Pos.Domain.Entities.AuditLog
+        {
+            Id = Guid.NewGuid(),
+            BusinessId = req.BusinessId,
+            ActorUserId = req.UserId,
+            Action = "SHIFT_OPEN",
+            EntityType = "Shift",
+            EntityId = shift.Id,
+            DataJson = $"idempotencyKey={idempotencyKey};shiftId={shift.Id}",
+            CreatedAt = DateTime.UtcNow
+        });
+
         await _ctx.SaveChangesAsync(ct);
 
         await _hub.Clients.Group(req.BusinessId.ToString()).SendAsync("cash.updated", cancellationToken: ct);
@@ -114,8 +142,22 @@ public sealed class ShiftService : IShiftService
         return new CreateShiftResponse { ShiftId = shift.Id, OpenedAt = shift.OpenedAt };
     }
 
-    public async Task<ShiftSummaryDto> CloseAsync(CloseShiftRequest req, CancellationToken ct)
+    public async Task<ShiftSummaryDto> CloseAsync(CloseShiftRequest req, string? idempotencyKey, CancellationToken ct)
     {
+
+        if (!string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            var replay = await _ctx.AuditLogs.AsNoTracking()
+                .Where(a => a.BusinessId == req.BusinessId && a.ActorUserId == req.UserId && a.Action == "SHIFT_CLOSE" && a.DataJson != null && a.DataJson.Contains(idempotencyKey))
+                .OrderByDescending(a => a.CreatedAt)
+                .FirstOrDefaultAsync(ct);
+
+            if (replay != null && replay.EntityId != Guid.Empty)
+            {
+                return await SummaryAsync(replay.EntityId, req.BusinessId, ct);
+            }
+        }
+
         var shift = await _ctx.Shifts.FindAsync(new object?[] { req.ShiftId }, ct);
         if (shift == null || shift.BusinessId != req.BusinessId || shift.Status != "OPEN")
             throw new ApiProblemException(StatusCodes.Status400BadRequest, "Shift invalid", "Shift not found or not open", "SHIFT_NOT_OPEN");
@@ -134,6 +176,18 @@ public sealed class ShiftService : IShiftService
         shift.ClosedAt = DateTime.UtcNow;
         shift.Status = "CLOSED";
         shift.Notes = req.Notes;
+        _ctx.AuditLogs.Add(new BMTECHRD.Pos.Domain.Entities.AuditLog
+        {
+            Id = Guid.NewGuid(),
+            BusinessId = req.BusinessId,
+            ActorUserId = req.UserId,
+            Action = "SHIFT_CLOSE",
+            EntityType = "Shift",
+            EntityId = shift.Id,
+            DataJson = $"idempotencyKey={idempotencyKey};shiftId={shift.Id}",
+            CreatedAt = DateTime.UtcNow
+        });
+
         await _ctx.SaveChangesAsync(ct);
 
         await _hub.Clients.Group(req.BusinessId.ToString()).SendAsync("cash.updated", cancellationToken: ct);

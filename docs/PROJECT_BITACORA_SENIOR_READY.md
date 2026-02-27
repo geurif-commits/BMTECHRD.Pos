@@ -33,7 +33,8 @@ Entregar un POS robusto y mantenible con:
 - Refactor de ajuste de inventario a `InventoryService`.
 - Refactor de caja/pagos a `CashierService` con idempotencia básica por `Idempotency-Key`.
 - Refactor de users/products/tables a servicios (`UsersService`, `ProductsService`, `TablesService`).
-- Controladores `Orders`, `Reports`, `Shifts`, `Inventory`, `Cashier`, `Users`, `Products`, `Tables` quedaron más delgados y delegan en servicios.
+- Refactor de categorías/licencias/negocio público a servicios (`CategoriesService`, `LicenseActivationService`, `BusinessService`).
+- Controladores críticos quedaron más delgados y delegan en servicios.
 
 **Error handling**
 - Excepción de negocio centralizada: `ApiProblemException`.
@@ -48,7 +49,7 @@ Entregar un POS robusto y mantenible con:
 ### 3.3 Cliente WPF
 - Flujo auth endurecido en etapas previas (DeviceId, refresh flow).
 - Extracción de política de rol por modo de dispositivo a `IDeviceRolePolicy` / `DeviceRolePolicy`.
-- Queda pendiente reducir más orquestación de `MainWindow` (sesión + SignalR + navegación).
+- Se redujo orquestación de `MainWindow` al extraer coordinación post-login a `IMainWindowSessionOrchestrator`; queda mejora incremental de navegación avanzada.
 
 ### 3.4 Pruebas
 - AuthHarness existente para refresh/reintentos/concurrencia.
@@ -62,6 +63,12 @@ Entregar un POS robusto y mantenible con:
   - `UsersServiceTests`
   - `ProductsServiceTests`
   - `TablesServiceTests`
+  - `CategoriesServiceTests`
+  - `LicenseActivationServiceTests`
+  - `BusinessServiceTests`
+  - `InventoryMovementsServiceTests`
+  - `ShiftIdempotencyTests`
+  - `OrderBatchIdempotencyTests`
 
 ### 3.5 CI/CD
 - Pipeline CI en GitHub Actions con:
@@ -89,6 +96,10 @@ Entregar un POS robusto y mantenible con:
 9. Extracción de caja a servicio + idempotencia básica y baseline de performance.
 10. Integración API inicial con `WebApplicationFactory` (health smoke).
 11. Extracción adicional de users/products/tables a servicios + nuevos unit tests.
+12. Extracción de categorías/licencias/negocio público + reducción adicional de orquestación WPF (`IMainWindowSessionOrchestrator`).
+13. Endurecimiento de idempotencia en órdenes y turnos.
+14. Extracción de categorías/licencias/negocio público/inventory-movements a servicios + estandarización de errores.
+15. Reducción adicional de orquestación WPF con `IMainWindowSessionOrchestrator`.
 
 ---
 
@@ -105,11 +116,11 @@ Entregar un POS robusto y mantenible con:
 ## 6) Qué falta para cerrar “senior-ready”
 
 ### 6.1 Arquitectura
-- Extraer también casos de uso restantes de `CategoriesController`, `LicenseController`, `BusinessController`, `BusinessPublicController` y otros endpoints administrativos pendientes.
+- Mantener vigilancia sobre nuevos endpoints administrativos para asegurar patrón de servicio desde su creación.
 - Definir convención estable de carpetas por feature (`Services/<Feature>` + contratos).
 
 ### 6.2 Contratos de error
-- Eliminar respuestas directas heterogéneas (`BadRequest("...")`, `NotFound("...")`) en controladores restantes y migrarlas a `ApiProblemException`.
+- El contrato de error ya está estandarizado en controladores críticos; validar continuamente endpoints nuevos para no romper consistencia.
 - Definir catálogo de códigos de error por dominio (AUTH, ORDER, SHIFT, INV, CASH, REPORT, USER, TABLE).
 
 ### 6.3 Testing
@@ -121,8 +132,8 @@ Entregar un POS robusto y mantenible con:
 - Mejorar testabilidad de navegación.
 
 ### 6.5 Resiliencia
-- Extender idempotencia más allá de pagos de caja (cierres/órdenes críticas).
-- Definir política de expiración/almacenamiento para llaves de idempotencia.
+- Idempotencia básica extendida a pagos, órdenes por lote y aperturas/cierres de turno.
+- Pendiente: política robusta de expiración/almacenamiento de llaves de idempotencia.
 
 ### 6.6 Operación y gobernanza
 - Runbook de despliegue/rollback ya creado; falta institucionalizar su uso operativo.

@@ -6,6 +6,10 @@ using BMTECHRD.Pos.Api.Services.Cashier;
 using BMTECHRD.Pos.Api.Services.Products;
 using BMTECHRD.Pos.Api.Services.Tables;
 using BMTECHRD.Pos.Api.Services.Users;
+using BMTECHRD.Pos.Api.Services.Business;
+using BMTECHRD.Pos.Api.Services.InventoryMovements;
+using BMTECHRD.Pos.Api.Services.License;
+using BMTECHRD.Pos.Api.Services.Categories;
 using BMTECHRD.Pos.Api.Hubs;
 using BMTECHRD.Pos.Api.Extensions;
 using BMTECHRD.Pos.Infrastructure;
@@ -27,6 +31,10 @@ builder.Services.AddScoped<ICashierService, CashierService>();
 builder.Services.AddScoped<IUsersService, UsersService>();
 builder.Services.AddScoped<ITablesService, TablesService>();
 builder.Services.AddScoped<IProductsService, ProductsService>();
+builder.Services.AddScoped<ICategoriesService, CategoriesService>();
+builder.Services.AddScoped<ILicenseActivationService, LicenseActivationService>();
+builder.Services.AddScoped<IBusinessService, BusinessService>();
+builder.Services.AddScoped<IInventoryMovementsService, InventoryMovementsService>();
 
 // Infrastructure (DbContext, Auth services)
 builder.Services.AddInfrastructure(builder.Configuration);
