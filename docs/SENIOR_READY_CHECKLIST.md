@@ -21,7 +21,7 @@
 ## 3) Pruebas
 - [x] Tests de auth flow existentes.
 - [x] Nuevos unit tests de servicios (`OrderBatchService`, `ReportsService`, `ShiftService`, `InventoryService`, `CashierService`, `UsersService`, `ProductsService`, `TablesService`, `CategoriesService`, `LicenseActivationService`, `BusinessService`, `InventoryMovementsService`, `OrderBatchIdempotency`, `ShiftIdempotency`).
-- [x] Integration tests API+DB iniciales (smoke endpoint API con `WebApplicationFactory`).
+- [x] Integration tests API+DB expandidos con `WebApplicationFactory` (health + auth flow + activación de licencia).
 
 ## 4) Documentación operativa
 - [x] README base con setup/build/run/test.

@@ -101,6 +101,7 @@ Entregar un POS robusto y mantenible con:
 14. Extracción de categorías/licencias/negocio público/inventory-movements a servicios + estandarización de errores.
 15. Reducción adicional de orquestación WPF con `IMainWindowSessionOrchestrator`.
 16. Consolidación de almacenamiento de llaves de idempotencia con `IIdempotencyKeyStore` (TTL y compactación).
+17. Expansión de integration tests API+DB para flujos críticos iniciales (`auth login/me/refresh` y `license activate`).
 
 ---
 
@@ -125,7 +126,7 @@ Entregar un POS robusto y mantenible con:
 - Definir catálogo de códigos de error por dominio (AUTH, ORDER, SHIFT, INV, CASH, REPORT, USER, TABLE).
 
 ### 6.3 Testing
-- Expandir tests de integración (actualmente hay smoke inicial) a flujos críticos: órdenes, pagos/caja, turnos, inventario, users/products/tables, auth refresh edge-cases.
+- Integración API expandida en auth/licencia; mantener expansión progresiva a órdenes, pagos/caja, turnos, inventario y users/products/tables.
 - Subir cobertura efectiva más allá del mínimo (meta sugerida: >= 75%).
 
 ### 6.4 WPF
