@@ -18,5 +18,7 @@ public sealed class OrderItem : Entity
 
     public OrderItemStatus Status { get; set; } = OrderItemStatus.SENT;
 
+    public string? Notes { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

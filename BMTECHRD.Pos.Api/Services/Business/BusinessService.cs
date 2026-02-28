@@ -29,7 +29,7 @@ public sealed class BusinessService : IBusinessService
         };
 
         var activationKey = GenerateActivationKey();
-        business.License = new License
+        business.License = new BMTECHRD.Pos.Domain.Entities.License
         {
             ActivationKey = activationKey,
             Plan = LicensePlan.TRIAL_7_DAYS,

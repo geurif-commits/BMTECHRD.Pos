@@ -30,7 +30,7 @@ public sealed class ErrorHandlingMiddleware
                 ex.Title,
                 ex.Message,
                 ex.ErrorCode,
-                includeException: false);
+                includeException: null);
         }
         catch (Exception ex)
         {
