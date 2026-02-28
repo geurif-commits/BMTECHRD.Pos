@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows.Data;
 using BMTECHRD.Pos.App.Models;
@@ -82,6 +83,14 @@ public sealed class ShiftsAdminViewModel : ViewModelBase
                 Shifts.Add(shift);
             ShiftsView.Refresh();
         }
+        catch (HttpRequestException)
+        {
+            Error = "No fue posible cargar turnos. Verifica la conexión con el servidor.";
+        }
+        catch (TaskCanceledException)
+        {
+            Error = "Tiempo de espera agotado al cargar turnos.";
+        }
         catch (Exception ex)
         {
             Error = ex.Message;
@@ -107,6 +116,14 @@ public sealed class ShiftsAdminViewModel : ViewModelBase
         {
             var summary = await _api.GetShiftSummaryAsync(_businessId, SelectedShift.ShiftId);
             Summary = summary;
+        }
+        catch (HttpRequestException)
+        {
+            Error = "No fue posible cargar el resumen del turno. Verifica la conexión con el servidor.";
+        }
+        catch (TaskCanceledException)
+        {
+            Error = "Tiempo de espera agotado al cargar el resumen del turno.";
         }
         catch (Exception ex)
         {

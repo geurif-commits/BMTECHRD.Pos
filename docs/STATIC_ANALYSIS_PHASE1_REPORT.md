@@ -24,10 +24,10 @@ En este entorno no está disponible `dotnet`, por lo que el inventario se constr
 | 9 | Medio | `ToString()` en enums | `CashierService` | 🔄 Pendiente lote B |
 | 10 | Medio | `ToString()` en enums | `ProductionQueueService` | 🔄 Pendiente lote B |
 | 11 | Medio | `InvalidOperationException` con mensajes de config | `Program.cs` | 🔄 Pendiente lote C |
-| 12 | Medio | Captura genérica + rethrow wrapped | `LocalDeviceConfigService` | 🔄 Pendiente lote C |
-| 13 | Bajo | Capturas genéricas en UI (diagnóstico) | `LoginViewModel` | 🔄 Pendiente lote C |
-| 14 | Bajo | Capturas genéricas en UI (diagnóstico) | `ReportsAdminViewModel` | 🔄 Pendiente lote C |
-| 15 | Bajo | Capturas genéricas en UI (diagnóstico) | `ShiftsAdminViewModel` | 🔄 Pendiente lote C |
+| 12 | Medio | Captura genérica + rethrow wrapped | `LocalDeviceConfigService` | ✅ Corregido (manejo explícito IO/permiso) |
+| 13 | Bajo | Capturas genéricas en UI (diagnóstico) | `LoginViewModel` | ✅ Corregido (catches específicos de red/timeout) |
+| 14 | Bajo | Capturas genéricas en UI (diagnóstico) | `ReportsAdminViewModel` | ✅ Corregido (catches específicos de red/timeout) |
+| 15 | Bajo | Capturas genéricas en UI (diagnóstico) | `ShiftsAdminViewModel` | ✅ Corregido (catches específicos de red/timeout) |
 | 16 | Bajo | `Task.Run` en UI orchestration (revisión) | `MainWindow.xaml.cs` | 🔄 Pendiente lote C |
 | 17 | Bajo | String interpolation en errores de IO/config | `LocalDeviceConfigService` | 🔄 Pendiente lote C |
 | 18 | Bajo | Validación hardcoded strings estado | `CashierService`/`ShiftService` | ✅ Corregido (constantes de estado) |
@@ -72,4 +72,10 @@ En este entorno no está disponible `dotnet`, por lo que el inventario se constr
 ## Avance Fase 2 (incremental)
 - ✅ Se eliminaron strings mágicos de estado en servicios críticos (`ShiftService` y `CashierService`) mediante constantes internas de dominio operativo.
 - ✅ Se consolidaron topics de SignalR en constantes en `ProductionQueueService` para reducir hardcoding y facilitar mantenimiento.
-- 🔄 Continúa pendiente el lote C (manejo de excepciones UI/config y refinamientos de mantenibilidad).
+- 🔄 Lote C parcialmente resuelto: manejo de excepciones de config/UI endurecido; queda revisión de `Task.Run` y ajustes finales de mantenibilidad.
+
+
+## Avance Fase 3 (cierre incremental)
+- ✅ `LocalDeviceConfigService` ahora captura explícitamente errores de IO/permisos y elimina `catch` genéricos.
+- ✅ ViewModels de autenticación y administración (`Login`, `ReportsAdmin`, `ShiftsAdmin`) incorporan manejo explícito de `HttpRequestException` y `TaskCanceledException`.
+- 🔄 Queda pendiente la revisión de `Task.Run` en orquestación de `MainWindow` para cierre completo del lote C.

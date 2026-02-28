@@ -3,6 +3,7 @@ using BMTECHRD.Pos.Application.DTOs;
 using BMTECHRD.Pos.App.Services;
 using System;
 using System.ComponentModel;
+using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -124,6 +125,16 @@ public sealed class LoginViewModel : INotifyPropertyChanged
 
             Status = "Acceso concedido. Cargando...";
             await _nav.GoToShellAsync();
+        }
+        catch (HttpRequestException)
+        {
+            Error = "No fue posible conectar con el servidor de autenticación.";
+            Status = null;
+        }
+        catch (TaskCanceledException)
+        {
+            Error = "La solicitud de autenticación excedió el tiempo de espera.";
+            Status = null;
         }
         catch (Exception ex)
         {

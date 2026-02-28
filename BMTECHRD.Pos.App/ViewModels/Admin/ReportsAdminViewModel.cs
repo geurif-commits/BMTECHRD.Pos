@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using BMTECHRD.Pos.App.Models;
 using BMTECHRD.Pos.App.Services;
@@ -114,6 +115,14 @@ public sealed class ReportsAdminViewModel : ViewModelBase
                 PaymentsTransfer = DailyReport.Payments.Transfer;
                 PaymentsMixed = DailyReport.Payments.Mixed;
             }
+        }
+        catch (HttpRequestException)
+        {
+            Error = "No fue posible cargar reportes. Verifica la conexión con el servidor.";
+        }
+        catch (TaskCanceledException)
+        {
+            Error = "Tiempo de espera agotado al cargar reportes.";
         }
         catch (Exception ex)
         {

@@ -63,3 +63,6 @@
 - [x] Top 20 hallazgos priorizados por riesgo documentados (`docs/STATIC_ANALYSIS_PHASE1_REPORT.md`).
 - [x] Lote A de corrección aplicado (null-safety + catches silenciosos + cleanup de eventos/variables).
 - [x] Lotes B/C definidos para iteraciones siguientes.
+- [x] Avance Fase 2 aplicado (reducción de strings mágicos en `ShiftService`/`CashierService` y topics en `ProductionQueueService`).
+- [x] Avance Fase 3 aplicado (manejo explícito de IO/permisos en `LocalDeviceConfigService` y errores de red/timeout en ViewModels admin/auth).
+- [ ] Cierre final pendiente: revisión de `Task.Run` en `MainWindow` y hardening final de lote C.

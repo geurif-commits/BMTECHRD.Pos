@@ -110,6 +110,7 @@ Entregar un POS robusto y mantenible con:
 23. Ejecución de Análisis Estático Fase 1 (top 20, priorización por riesgo y lote A de correcciones).
 24. Corrección de bloqueantes de compilación detectados en CI (`ShiftService` contract mismatch).
 25. Inicio de Fase 2: reducción de strings mágicos de estado y consolidación de constantes de eventos en servicios críticos (`ShiftService`, `CashierService`, `ProductionQueueService`).
+26. Fase 3: endurecimiento de manejo de excepciones en configuración local y ViewModels administrativos/auth (errores de red/timeout explícitos).
 
 ---
 
