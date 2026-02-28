@@ -1,9 +1,6 @@
+using BMTECHRD.Pos.Api.Services.Tables;
 using BMTECHRD.Pos.Application.DTOs;
-using BMTECHRD.Pos.Application.Abstractions.Security;
-using BMTECHRD.Pos.Infrastructure.Persistence;
-using BMTECHRD.Pos.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace BMTECHRD.Pos.Api.Controllers;
 
@@ -11,74 +8,38 @@ namespace BMTECHRD.Pos.Api.Controllers;
 [Route("api/tables")]
 public sealed class TablesController : ControllerBase
 {
-    private readonly AppDbContext _ctx;
-    private readonly IPasswordHasher _hasher;
-    private readonly ITableAccessPolicy _policy;
+    private readonly ITablesService _tablesService;
 
-    public TablesController(AppDbContext ctx, IPasswordHasher hasher, ITableAccessPolicy policy)
+    public TablesController(ITablesService tablesService)
     {
-        _ctx = ctx;
-        _hasher = hasher;
-        _policy = policy;
+        _tablesService = tablesService;
     }
 
     [HttpGet]
-    public async Task<IActionResult> Get([FromQuery] Guid businessId)
+    public async Task<IActionResult> Get([FromQuery] Guid businessId, CancellationToken ct)
     {
-        var list = await _ctx.Tables.Where(t => t.BusinessId == businessId).OrderBy(t => t.Number).ToListAsync();
+        var list = await _tablesService.GetAsync(businessId, ct);
         return Ok(list);
     }
 
     [HttpPost("{id}/open")]
-    public async Task<IActionResult> Open([FromRoute] Guid id, [FromBody] OpenTableRequest req)
+    public async Task<IActionResult> Open([FromRoute] Guid id, [FromBody] OpenTableRequest req, CancellationToken ct)
     {
-        var table = await _ctx.Tables.FindAsync(id);
-        if (table == null) return NotFound();
-        if (table.Status != BMTECHRD.Pos.Domain.Enums.TableStatus.AVAILABLE) return BadRequest("Table not available");
-        table.Status = BMTECHRD.Pos.Domain.Enums.TableStatus.OPEN;
-        table.OpenedByWaiterId = req.WaiterId;
-        table.OpenedAt = DateTime.UtcNow;
-        await _ctx.SaveChangesAsync();
+        var table = await _tablesService.OpenAsync(id, req, ct);
         return Ok(table);
     }
 
     [HttpPost("{id}/access")]
-    public async Task<IActionResult> Access([FromRoute] Guid id, [FromBody] TableAccessRequest req)
+    public async Task<IActionResult> Access([FromRoute] Guid id, [FromBody] TableAccessRequest req, CancellationToken ct)
     {
-        var table = await _ctx.Tables.FindAsync(id);
-        if (table == null) return NotFound();
-        var actor = await _ctx.Users.FindAsync(req.ActorUserId);
-        if (actor == null) return NotFound("Actor user not found");
-
-        var requiresPin = _policy.RequiresPin(actor.Role, table.OpenedByWaiterId, req.ActorUserId);
-        if (!requiresPin)
-        {
-            return Ok(new TableAccessResponse { RequiresPin = false, AccessGranted = true });
-        }
-
-        // validate PIN format
-        if (string.IsNullOrWhiteSpace(req.Pin) || req.Pin.Length != 4 || !req.Pin.All(char.IsDigit))
-        {
-            return BadRequest(new TableAccessResponse { RequiresPin = true, AccessGranted = false, Reason = "Invalid PIN format" });
-        }
-
-        var ok = _hasher.Verify(req.Pin, actor.PinHash ?? string.Empty);
-        if (!ok)
-        {
-            return Ok(new TableAccessResponse { RequiresPin = true, AccessGranted = false, Reason = "Invalid PIN" });
-        }
-
-        return Ok(new TableAccessResponse { RequiresPin = true, AccessGranted = true });
+        var resp = await _tablesService.AccessAsync(id, req, ct);
+        return Ok(resp);
     }
 
     [HttpPatch("{id}/position")]
-    public async Task<IActionResult> UpdatePosition([FromRoute] Guid id, [FromBody] UpdateTablePositionRequest req)
+    public async Task<IActionResult> UpdatePosition([FromRoute] Guid id, [FromBody] UpdateTablePositionRequest req, CancellationToken ct)
     {
-        var table = await _ctx.Tables.FindAsync(id);
-        if (table == null) return NotFound();
-        table.PosX = req.PosX;
-        table.PosY = req.PosY;
-        await _ctx.SaveChangesAsync();
+        var table = await _tablesService.UpdatePositionAsync(id, req, ct);
         return Ok(table);
     }
 }

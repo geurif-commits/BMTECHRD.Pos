@@ -2,6 +2,7 @@ using System.Windows.Controls;
 using BMTECHRD.Pos.App.Services;
 using BMTECHRD.Pos.App.ViewModels;
 using BMTECHRD.Pos.App.Models;
+using BMTECHRD.Pos.Auth.Core.Services;
 using System.Windows;
 
 namespace BMTECHRD.Pos.App.Views;
@@ -16,7 +17,7 @@ public partial class StartView : UserControl
         InitializeComponent();
     }
 
-    public void Initialize(ApiClient api, AuthSessionService session)
+    public void Initialize(BMTECHRD.Pos.App.Services.ApiClient api, BMTECHRD.Pos.Auth.Core.Services.AuthSessionService session)
     {
         _vm = new StartViewModel(api, session);
         DataContext = _vm;

@@ -1,7 +1,6 @@
-using BMTECHRD.Pos.Infrastructure.Persistence;
+using BMTECHRD.Pos.Api.Services.Categories;
 using BMTECHRD.Pos.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace BMTECHRD.Pos.Api.Controllers;
 
@@ -9,54 +8,38 @@ namespace BMTECHRD.Pos.Api.Controllers;
 [Route("api/categories")]
 public sealed class CategoriesController : ControllerBase
 {
-    private readonly AppDbContext _ctx;
-    public CategoriesController(AppDbContext ctx) => _ctx = ctx;
+    private readonly ICategoriesService _categoriesService;
+
+    public CategoriesController(ICategoriesService categoriesService)
+    {
+        _categoriesService = categoriesService;
+    }
 
     [HttpGet]
-    public async Task<IActionResult> Get([FromQuery] Guid businessId)
+    public async Task<IActionResult> Get([FromQuery] Guid businessId, CancellationToken ct)
     {
-        var list = await _ctx.Categories.Where(c => c.BusinessId == businessId).OrderBy(c => c.SortOrder).ThenBy(c => c.Name).ToListAsync();
+        var list = await _categoriesService.GetAsync(businessId, ct);
         return Ok(list);
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] Category dto)
+    public async Task<IActionResult> Create([FromBody] Category dto, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(dto.Name) || dto.Name.Length > 60) return BadRequest("Invalid name");
-        dto.Id = Guid.NewGuid();
-        dto.CreatedAt = DateTime.UtcNow;
-        // ensure unique name per business
-        var exists = await _ctx.Categories.AnyAsync(c => c.BusinessId == dto.BusinessId && c.Name == dto.Name);
-        if (exists) return BadRequest("Category with same name already exists");
-        _ctx.Categories.Add(dto);
-        await _ctx.SaveChangesAsync();
-        return CreatedAtAction(null, dto);
+        var created = await _categoriesService.CreateAsync(dto, ct);
+        return CreatedAtAction(null, created);
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Edit([FromRoute] Guid id, [FromBody] Category dto)
+    public async Task<IActionResult> Edit([FromRoute] Guid id, [FromBody] Category dto, CancellationToken ct)
     {
-        var cat = await _ctx.Categories.FindAsync(id);
-        if (cat == null) return NotFound();
-        if (string.IsNullOrWhiteSpace(dto.Name) || dto.Name.Length > 60) return BadRequest("Invalid name");
-        var exists = await _ctx.Categories.AnyAsync(c => c.BusinessId == cat.BusinessId && c.Name == dto.Name && c.Id != id);
-        if (exists) return BadRequest("Category with same name already exists");
-        cat.Name = dto.Name;
-        cat.SortOrder = dto.SortOrder;
-        cat.IsActive = dto.IsActive;
-        cat.UpdatedAt = DateTime.UtcNow;
-        await _ctx.SaveChangesAsync();
+        var cat = await _categoriesService.EditAsync(id, dto, ct);
         return Ok(cat);
     }
 
     [HttpPatch("{id}/toggle")]
-    public async Task<IActionResult> Toggle([FromRoute] Guid id)
+    public async Task<IActionResult> Toggle([FromRoute] Guid id, CancellationToken ct)
     {
-        var cat = await _ctx.Categories.FindAsync(id);
-        if (cat == null) return NotFound();
-        cat.IsActive = !cat.IsActive;
-        cat.UpdatedAt = DateTime.UtcNow;
-        await _ctx.SaveChangesAsync();
+        var cat = await _categoriesService.ToggleAsync(id, ct);
         return Ok(cat);
     }
 }

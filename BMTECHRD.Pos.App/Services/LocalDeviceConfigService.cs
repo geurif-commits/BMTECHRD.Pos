@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.Text.Json;
 using BMTECHRD.Pos.App.Core;
@@ -40,8 +41,7 @@ public sealed class LocalDeviceConfigService
                 return null;
 
             var json = File.ReadAllText(_configPath);
-            var config = JsonSerializer.Deserialize<DeviceConfig>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            return config;
+            return JsonSerializer.Deserialize<DeviceConfig>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
         catch (JsonException)
         {
@@ -49,7 +49,11 @@ public sealed class LocalDeviceConfigService
             BackupCorruptedFile();
             return null;
         }
-        catch
+        catch (IOException)
+        {
+            return null;
+        }
+        catch (UnauthorizedAccessException)
         {
             return null;
         }
@@ -63,9 +67,13 @@ public sealed class LocalDeviceConfigService
             var json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(_configPath, json);
         }
-        catch (Exception ex)
+        catch (IOException ex)
         {
-            throw new InvalidOperationException($"Error guardando configuración del dispositivo: {ex.Message}", ex);
+            throw new InvalidOperationException("Error guardando configuración del dispositivo.", ex);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            throw new InvalidOperationException("Error guardando configuración del dispositivo.", ex);
         }
     }
 
@@ -81,9 +89,13 @@ public sealed class LocalDeviceConfigService
             // Opcionalmente, limpiar backups antiguos
             CleanupOldBackups();
         }
-        catch (Exception ex)
+        catch (IOException ex)
         {
-            throw new InvalidOperationException($"Error reseteando configuración: {ex.Message}", ex);
+            throw new InvalidOperationException("Error reseteando configuración del dispositivo.", ex);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            throw new InvalidOperationException("Error reseteando configuración del dispositivo.", ex);
         }
     }
 
@@ -93,12 +105,16 @@ public sealed class LocalDeviceConfigService
         {
             if (File.Exists(_configPath))
             {
-                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss", CultureInfo.InvariantCulture);
                 var backupPath = $"{_configPath}.{timestamp}.bak";
                 File.Move(_configPath, backupPath, overwrite: false);
             }
         }
-        catch
+        catch (IOException)
+        {
+            // Ignorar errores al hacer backup
+        }
+        catch (UnauthorizedAccessException)
         {
             // Ignorar errores al hacer backup
         }
@@ -108,26 +124,34 @@ public sealed class LocalDeviceConfigService
     {
         try
         {
-            var cutoffDate = DateTime.Now.AddDays(-10);
+            var cutoffDate = DateTime.UtcNow.AddDays(-10);
             var backupFiles = Directory.GetFiles(_configFolder, "device.config.json.*.bak");
 
             foreach (var backupFile in backupFiles)
             {
                 var fileInfo = new FileInfo(backupFile);
-                if (fileInfo.LastWriteTime < cutoffDate)
+                if (fileInfo.LastWriteTimeUtc < cutoffDate)
                 {
                     try
                     {
                         File.Delete(backupFile);
                     }
-                    catch
+                    catch (IOException)
+                    {
+                        // Ignorar errores al limpiar
+                    }
+                    catch (UnauthorizedAccessException)
                     {
                         // Ignorar errores al limpiar
                     }
                 }
             }
         }
-        catch
+        catch (IOException)
+        {
+            // Ignorar errores
+        }
+        catch (UnauthorizedAccessException)
         {
             // Ignorar errores
         }

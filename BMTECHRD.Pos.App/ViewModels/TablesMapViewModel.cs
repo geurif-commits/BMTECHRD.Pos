@@ -43,7 +43,10 @@ public sealed class TablesMapViewModel : ViewModelBase
                 foreach (var t in list.OrderBy(x => x.Number)) Tables.Add(t);
             });
         }
-        catch { /* ignore for now */ }
+        catch (Exception ex)
+        {
+            Error = ex.Message;
+        }
     }
 
     private async Task OpenOrAccessAsync(object? param)

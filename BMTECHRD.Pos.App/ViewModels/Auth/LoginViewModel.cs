@@ -1,19 +1,20 @@
 ﻿using BMTECHRD.Pos.Auth.Core.Services;
 using BMTECHRD.Pos.Application.DTOs;
+using BMTECHRD.Pos.App.Services;
 using System;
 using System.ComponentModel;
+using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Input;
-using System.Windows.Navigation;
 
 namespace BMTECHRD.Pos.App.ViewModels.Auth;
 
 public sealed class LoginViewModel : INotifyPropertyChanged
 {
-    private readonly ApiClient _api;
-    private readonly AuthSessionService _session;
-    private readonly INavigationService _nav;
+    private readonly BMTECHRD.Pos.App.Services.ApiClient _api;
+    private readonly BMTECHRD.Pos.Auth.Core.Services.AuthSessionService _session;
+    private readonly BMTECHRD.Pos.App.Services.INavigationService _nav;
 
     private string _businessIdText = string.Empty;
     private string _username = string.Empty;
@@ -25,7 +26,7 @@ public sealed class LoginViewModel : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public LoginViewModel(ApiClient api, AuthSessionService session, INavigationService nav)
+    public LoginViewModel(BMTECHRD.Pos.App.Services.ApiClient api, BMTECHRD.Pos.Auth.Core.Services.AuthSessionService session, BMTECHRD.Pos.App.Services.INavigationService nav)
     {
         _api = api;
         _session = session;
@@ -124,6 +125,16 @@ public sealed class LoginViewModel : INotifyPropertyChanged
 
             Status = "Acceso concedido. Cargando...";
             await _nav.GoToShellAsync();
+        }
+        catch (HttpRequestException)
+        {
+            Error = "No fue posible conectar con el servidor de autenticación.";
+            Status = null;
+        }
+        catch (TaskCanceledException)
+        {
+            Error = "La solicitud de autenticación excedió el tiempo de espera.";
+            Status = null;
         }
         catch (Exception ex)
         {
