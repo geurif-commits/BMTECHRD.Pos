@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BMTECHRD.Pos.AuthHarness.Shared;
 using BMTECHRD.Pos.App.Services;
+using BMTECHRD.Pos.Auth.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -107,3 +108,4 @@ public class AuthFlowTests
         Assert.Equal(1, expired);
     }
 }
+

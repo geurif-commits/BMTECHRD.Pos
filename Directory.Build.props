@@ -1,8 +1,6 @@
 <Project>
-  <PropertyGroup>
-    <EnableNETAnalyzers>true</EnableNETAnalyzers>
-    <AnalysisLevel>latest-recommended</AnalysisLevel>
-    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Update="Microsoft.AspNetCore.SignalR.Client" Version="8.0.8" />
+    <PackageReference Update="Microsoft.AspNetCore.Connections.Abstractions" Version="8.0.8" />
+  </ItemGroup>
 </Project>
