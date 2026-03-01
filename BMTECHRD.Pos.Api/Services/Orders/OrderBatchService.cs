@@ -7,6 +7,7 @@ using BMTECHRD.Pos.Domain.Enums;
 using BMTECHRD.Pos.Infrastructure.Persistence;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace BMTECHRD.Pos.Api.Services.Orders;
 
@@ -75,7 +76,11 @@ public sealed class OrderBatchService : IOrderBatchService
                 throw new ApiProblemException(400, "Insufficient stock", $"Insufficient stock for product {prod.Name}", "ORDER_STOCK_INSUFFICIENT");
         }
 
-        await using var tx = await _ctx.Database.BeginTransactionAsync(ct);
+        IDbContextTransaction? tx = null;
+        if (_ctx.Database.IsRelational())
+        {
+            tx = await _ctx.Database.BeginTransactionAsync(ct);
+        }
 
         var order = new Order
         {
@@ -152,11 +157,15 @@ public sealed class OrderBatchService : IOrderBatchService
             await _idempotencyKeyStore.SaveAsync(IdempotencyScope, req.BusinessId, req.ActorUserId, idempotencyKey, order.Id, IdempotencyTtl, ct);
         }
 
-        await tx.CommitAsync(ct);
+        if (tx != null)
+            await tx.CommitAsync(ct);
 
-        await _hub.Clients.Group(req.BusinessId.ToString()).SendAsync("orders.updated", cancellationToken: ct);
-        await _hub.Clients.Group(req.BusinessId.ToString()).SendAsync("tables.updated", cancellationToken: ct);
-        await _hub.Clients.Group(req.BusinessId.ToString()).SendAsync("inventory.updated", cancellationToken: ct);
+        if (_hub?.Clients != null)
+        {
+            await _hub.Clients.Group(req.BusinessId.ToString()).SendAsync("orders.updated", cancellationToken: ct);
+            await _hub.Clients.Group(req.BusinessId.ToString()).SendAsync("tables.updated", cancellationToken: ct);
+            await _hub.Clients.Group(req.BusinessId.ToString()).SendAsync("inventory.updated", cancellationToken: ct);
+        }
 
         return new CreateOrderBatchResponse
         {

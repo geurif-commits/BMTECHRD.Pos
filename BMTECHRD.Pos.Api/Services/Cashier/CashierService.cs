@@ -207,8 +207,11 @@ public sealed class CashierService : ICashierService
             }
         }
 
-        await _hub.Clients.Group(req.BusinessId.ToString()).SendAsync("tables.updated", cancellationToken: ct);
-        await _hub.Clients.Group(req.BusinessId.ToString()).SendAsync("cash.updated", cancellationToken: ct);
+        if (_hub?.Clients != null)
+        {
+            await _hub.Clients.Group(req.BusinessId.ToString()).SendAsync("tables.updated", cancellationToken: ct);
+            await _hub.Clients.Group(req.BusinessId.ToString()).SendAsync("cash.updated", cancellationToken: ct);
+        }
 
         return await BuildPaymentStateAsync(req.BusinessId, req.TableId, req.Amount, req.CashGiven, closed, closeBlockedReason, ct);
     }

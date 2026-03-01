@@ -141,7 +141,8 @@ public sealed class ShiftService : IShiftService
             await _idempotencyKeyStore.SaveAsync(OpenScope, req.BusinessId, req.UserId, idempotencyKey, shift.Id, IdempotencyTtl, ct);
         }
 
-        await _hub.Clients.Group(req.BusinessId.ToString()).SendAsync("cash.updated", cancellationToken: ct);
+        if (_hub?.Clients != null)
+            await _hub.Clients.Group(req.BusinessId.ToString()).SendAsync("cash.updated", cancellationToken: ct);
 
         return new CreateShiftResponse { ShiftId = shift.Id, OpenedAt = shift.OpenedAt };
     }
@@ -194,7 +195,8 @@ public sealed class ShiftService : IShiftService
             await _idempotencyKeyStore.SaveAsync(CloseScope, req.BusinessId, req.UserId, idempotencyKey, shift.Id, IdempotencyTtl, ct);
         }
 
-        await _hub.Clients.Group(req.BusinessId.ToString()).SendAsync("cash.updated", cancellationToken: ct);
+        if (_hub?.Clients != null)
+            await _hub.Clients.Group(req.BusinessId.ToString()).SendAsync("cash.updated", cancellationToken: ct);
 
         return await BuildSummaryAsync(shift, salesCash, salesCard, salesTransfer, salesMixed, totalPayments, ct);
     }
