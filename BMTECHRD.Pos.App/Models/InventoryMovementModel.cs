@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 
 namespace BMTECHRD.Pos.App.Models;
 
@@ -12,5 +13,5 @@ public sealed class InventoryMovementModel
     public Guid? ActorUserId { get; set; }
     public string? ActorUsername { get; set; }
     public DateTime CreatedAt { get; set; }
-    public string TimeLabel => CreatedAt.ToString("g");
+    public string TimeLabel => CreatedAt.ToString("g", CultureInfo.InvariantCulture);
 }

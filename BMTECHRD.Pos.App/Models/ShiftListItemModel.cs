@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 
 namespace BMTECHRD.Pos.App.Models;
 
@@ -22,6 +23,6 @@ public sealed class ShiftListItemModel
 
     public bool IsOpen => Status == "OPEN";
     public bool IsClosed => Status == "CLOSED";
-    public string OpenedAtLabel => OpenedAt.ToString("g");
-    public string ClosedAtLabel => ClosedAt?.ToString("g") ?? "-";
+    public string OpenedAtLabel => OpenedAt.ToString("g", CultureInfo.InvariantCulture);
+    public string ClosedAtLabel => ClosedAt?.ToString("g", CultureInfo.InvariantCulture) ?? "-";
 }

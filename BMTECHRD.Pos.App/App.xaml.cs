@@ -48,8 +48,9 @@ public partial class App : System.Windows.Application
                     fileSizeLimitBytes: 10_000_000,
                     rollOnFileSizeLimit: true,
                     shared: true,
+                    formatProvider: System.Globalization.CultureInfo.InvariantCulture,
                     flushToDiskInterval: TimeSpan.FromSeconds(1))
-                .WriteTo.Console()
+                .WriteTo.Console(formatProvider: System.Globalization.CultureInfo.InvariantCulture)
                 .CreateLogger();
         }
         catch

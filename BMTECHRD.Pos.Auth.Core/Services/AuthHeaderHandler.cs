@@ -112,7 +112,9 @@ public sealed class AuthHeaderHandler : DelegatingHandler
 
         response.Dispose();
 
+#pragma warning disable CA2000 // Dispose objects before losing scope - ownership transferred to HttpClient.SendAsync which will dispose
         var retryRequest = await CloneHttpRequestMessageAsync(request, cancellationToken).ConfigureAwait(false);
+#pragma warning restore CA2000
         retryRequest.Options.Set(_retriedKey, true);
 
         AttachBearerIfNeeded(retryRequest);

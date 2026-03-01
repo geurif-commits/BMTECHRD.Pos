@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
@@ -31,7 +32,7 @@ public sealed class ProductionQueueItemModel : INotifyPropertyChanged
     public string Area { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
 
-    public string TimeLabel => CreatedAt.ToString("hh:mm tt");
+    public string TimeLabel => CreatedAt.ToString("hh:mm tt", CultureInfo.InvariantCulture);
 
     public bool CanStart => string.Equals(Status, "SENT", StringComparison.OrdinalIgnoreCase);
     public bool CanDone => string.Equals(Status, "IN_PROGRESS", StringComparison.OrdinalIgnoreCase);

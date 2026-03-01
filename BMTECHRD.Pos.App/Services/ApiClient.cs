@@ -49,7 +49,8 @@ public sealed class ApiClient
     public async Task<HttpResponseMessage> UpdateTablePositionAsync(Guid tableId, double posX, double posY)
     {
         var req = new UpdateTablePositionRequest { PosX = posX, PosY = posY };
-        var resp = await _http.PatchAsync($"api/tables/{tableId}/position", JsonContent.Create(req));
+        using var content = JsonContent.Create(req);
+        var resp = await _http.PatchAsync($"api/tables/{tableId}/position", content);
         return resp;
     }
 
@@ -134,8 +135,8 @@ public sealed class ApiClient
     {
         var url = $"api/inventory/movements?businessId={businessId}";
         if (productId.HasValue) url += $"&productId={productId.Value}";
-        if (from.HasValue) url += $"&from={System.Net.WebUtility.UrlEncode(from.Value.ToString("o"))}";
-        if (to.HasValue) url += $"&to={System.Net.WebUtility.UrlEncode(to.Value.ToString("o"))}";
+        if (from.HasValue) url += $"&from={System.Net.WebUtility.UrlEncode(from.Value.ToString("o", System.Globalization.CultureInfo.InvariantCulture))}";
+        if (to.HasValue) url += $"&to={System.Net.WebUtility.UrlEncode(to.Value.ToString("o", System.Globalization.CultureInfo.InvariantCulture))}";
         if (limit.HasValue) url += $"&limit={limit.Value}";
         var list = await _http.GetFromJsonAsync<List<InventoryMovementDto>>(url, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         if (list == null) return new List<InventoryMovementModel>();
@@ -199,8 +200,8 @@ public sealed class ApiClient
     {
         var url = $"api/shifts/list?businessId={businessId}";
         if (userId.HasValue) url += $"&userId={userId.Value}";
-        if (from.HasValue) url += $"&from={System.Net.WebUtility.UrlEncode(from.Value.ToString("o"))}";
-        if (to.HasValue) url += $"&to={System.Net.WebUtility.UrlEncode(to.Value.ToString("o"))}";
+        if (from.HasValue) url += $"&from={System.Net.WebUtility.UrlEncode(from.Value.ToString("o", System.Globalization.CultureInfo.InvariantCulture))}";
+        if (to.HasValue) url += $"&to={System.Net.WebUtility.UrlEncode(to.Value.ToString("o", System.Globalization.CultureInfo.InvariantCulture))}";
         if (!string.IsNullOrWhiteSpace(status)) url += $"&status={System.Net.WebUtility.UrlEncode(status)}";
         if (limit.HasValue) url += $"&limit={limit.Value}";
 
@@ -288,8 +289,8 @@ public sealed class ApiClient
     // Reports
     public async Task<DailySalesReportModel?> GetDailySalesAsync(Guid businessId, DateTime from, DateTime to)
     {
-        var fromStr = System.Net.WebUtility.UrlEncode(from.ToString("o"));
-        var toStr = System.Net.WebUtility.UrlEncode(to.ToString("o"));
+        var fromStr = System.Net.WebUtility.UrlEncode(from.ToString("o", System.Globalization.CultureInfo.InvariantCulture));
+        var toStr = System.Net.WebUtility.UrlEncode(to.ToString("o", System.Globalization.CultureInfo.InvariantCulture));
         var url = $"api/reports/sales/daily?businessId={businessId}&from={fromStr}&to={toStr}";
 
         var resp = await _http.GetAsync(url);
@@ -316,8 +317,8 @@ public sealed class ApiClient
 
     public async Task<List<SalesByProductModel>> GetSalesByProductAsync(Guid businessId, DateTime from, DateTime to, int limit)
     {
-        var fromStr = System.Net.WebUtility.UrlEncode(from.ToString("o"));
-        var toStr = System.Net.WebUtility.UrlEncode(to.ToString("o"));
+        var fromStr = System.Net.WebUtility.UrlEncode(from.ToString("o", System.Globalization.CultureInfo.InvariantCulture));
+        var toStr = System.Net.WebUtility.UrlEncode(to.ToString("o", System.Globalization.CultureInfo.InvariantCulture));
         var url = $"api/reports/sales/by-product?businessId={businessId}&from={fromStr}&to={toStr}&limit={limit}";
 
         var list = await _http.GetFromJsonAsync<List<SalesByProductDto>>(url, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
@@ -334,8 +335,8 @@ public sealed class ApiClient
 
     public async Task<List<SalesByUserModel>> GetSalesByUserAsync(Guid businessId, DateTime from, DateTime to)
     {
-        var fromStr = System.Net.WebUtility.UrlEncode(from.ToString("o"));
-        var toStr = System.Net.WebUtility.UrlEncode(to.ToString("o"));
+        var fromStr = System.Net.WebUtility.UrlEncode(from.ToString("o", System.Globalization.CultureInfo.InvariantCulture));
+        var toStr = System.Net.WebUtility.UrlEncode(to.ToString("o", System.Globalization.CultureInfo.InvariantCulture));
         var url = $"api/reports/sales/by-user?businessId={businessId}&from={fromStr}&to={toStr}";
 
         var list = await _http.GetFromJsonAsync<List<SalesByUserDto>>(url, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });

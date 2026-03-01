@@ -15,7 +15,7 @@ public static class TestHostFactory
         // minimal Serilog for tests
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Warning()
-            .WriteTo.Console()
+            .WriteTo.Console(formatProvider: System.Globalization.CultureInfo.InvariantCulture)
             .CreateLogger();
 
         var services = new ServiceCollection();
