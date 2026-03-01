@@ -1,3 +1,4 @@
+using System;
 using System.Windows.Input;
 using BMTECHRD.Pos.App.Core;
 using BMTECHRD.Pos.App.Helpers;
@@ -18,6 +19,7 @@ public class DeviceModeChangerViewModel : ViewModelBase
             if (_currentMode == value) return;
             _currentMode = value;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(CanSave));
         }
     }
 
@@ -47,26 +49,23 @@ public class DeviceModeChangerViewModel : ViewModelBase
 
     public bool CanSave => SelectedMode != CurrentMode && !IsLoading;
 
-    public ICommand SelectServerCommand { get; }
-    public ICommand SelectCashierCommand { get; }
-    public ICommand SelectKitchenCommand { get; }
-    public ICommand SelectBarCommand { get; }
-    public ICommand SelectFloorCommand { get; }
-    public ICommand SaveCommand { get; }
+    // Bindings usados por DeviceModeChangerDialog.xaml
+    public ICommand SelectModeCommand { get; }
+    public ICommand SaveAndRestartCommand { get; }
     public ICommand CancelCommand { get; }
 
-    public event System.Action<DeviceMode>? OnSaveRequested;
-    public event System.Action? OnCancelRequested;
+    public event Action<DeviceMode>? OnSaveRequested;
+    public event Action? OnCancelRequested;
 
     public DeviceModeChangerViewModel()
     {
-        SelectServerCommand = new RelayCommand(_ => SelectedMode = DeviceMode.Server);
-        SelectCashierCommand = new RelayCommand(_ => SelectedMode = DeviceMode.Cashier);
-        SelectKitchenCommand = new RelayCommand(_ => SelectedMode = DeviceMode.Kitchen);
-        SelectBarCommand = new RelayCommand(_ => SelectedMode = DeviceMode.Bar);
-        SelectFloorCommand = new RelayCommand(_ => SelectedMode = DeviceMode.Floor);
+        SelectModeCommand = new RelayCommand(p =>
+        {
+            if (p is DeviceMode mode) SelectedMode = mode;
+            else if (p != null && Enum.TryParse(p.ToString(), out DeviceMode parsed)) SelectedMode = parsed;
+        });
 
-        SaveCommand = new RelayCommand(_ => HandleSave(), _ => CanSave);
+        SaveAndRestartCommand = new RelayCommand(_ => HandleSave(), _ => CanSave);
         CancelCommand = new RelayCommand(_ => OnCancelRequested?.Invoke());
     }
 
@@ -74,6 +73,7 @@ public class DeviceModeChangerViewModel : ViewModelBase
     {
         CurrentMode = currentMode;
         SelectedMode = currentMode;
+        IsLoading = false;
     }
 
     private void HandleSave()

@@ -184,7 +184,7 @@
 
             <!-- Opción 1: Mantener instancias (como lo tienes) -->
             <TabItem Header="Usuarios">
-                <views:UsersAdminView />
+                <views:UsersAdminView x:Name="UsersView" />
             </TabItem>
 
             <TabItem Header="Categorías">
@@ -196,15 +196,19 @@
             </TabItem>
 
             <TabItem Header="Inventario">
-                <views:InventoryAdminView />
+                <views:InventoryAdminView x:Name="InventoryView" />
             </TabItem>
 
             <TabItem Header="Turnos">
-                <views:ShiftsAdminView />
+                <views:ShiftsAdminView x:Name="ShiftsView" />
             </TabItem>
 
             <TabItem Header="Reportes">
-                <views:ReportsAdminView />
+                <views:ReportsAdminView x:Name="ReportsView" />
+            </TabItem>
+
+            <TabItem Header="Negocio & Fiscal">
+                <views:BusinessSettingsView x:Name="BusinessSettingsView" />
             </TabItem>
 
         </TabControl>

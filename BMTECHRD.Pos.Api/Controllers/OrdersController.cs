@@ -112,10 +112,10 @@ public sealed class OrdersController : ControllerBase
             var resp = new CreateOrderBatchResponse { OrderId = order.Id, TotalItems = total, KitchenItems = kitchen, BarItems = bar };
             return Ok(resp);
         }
-        catch (Exception ex)
+        catch
         {
             await tx.RollbackAsync();
-            return StatusCode(500, ex.Message);
+            return Problem("Unexpected error creating order batch", statusCode: StatusCodes.Status500InternalServerError);
         }
     }
 }

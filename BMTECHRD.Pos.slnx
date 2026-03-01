@@ -4,4 +4,5 @@
   <Project Path="BMTECHRD.Pos.Application/BMTECHRD.Pos.Application.csproj" />
   <Project Path="BMTECHRD.Pos.Domain/BMTECHRD.Pos.Domain.csproj" />
   <Project Path="BMTECHRD.Pos.Infrastructure/BMTECHRD.Pos.Infrastructure.csproj" />
+  <Project Path="BMTECHRD.Pos.Tests/BMTECHRD.Pos.Tests.csproj" />
 </Solution>

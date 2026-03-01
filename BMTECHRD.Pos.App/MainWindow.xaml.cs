@@ -64,6 +64,7 @@ namespace BMTECHRD.Pos.App
             start.OnLoginSuccess += session =>
             {
                 // Guardar sesión auth
+                Title = $"BMTECHRD POS - {session.Username}";
                 _authSession!.SetSession(
                     session.AccessToken,
                     session.RefreshToken,
@@ -96,30 +97,12 @@ namespace BMTECHRD.Pos.App
 
         private static string GetBaseUrlFromConfigOrDefault(LocalDeviceConfig config)
         {
-            // Si tu LocalDeviceConfig tiene otra propiedad, cámbiala aquí (ApiBaseUrl/BaseUrl/ServerUrl).
-            // Si NO existe, cae a localhost.
-            var url = TryReadStringProperty(config, "ApiBaseUrl")
-                   ?? TryReadStringProperty(config, "BaseUrl")
-                   ?? TryReadStringProperty(config, "ServerUrl")
-                   ?? "https://localhost:5001/";
+            var url = string.IsNullOrWhiteSpace(config.ApiBaseUrl)
+                ? LocalDeviceConfigService.DefaultApiBaseUrl
+                : config.ApiBaseUrl.Trim();
 
-            url = url.Trim();
             if (!url.EndsWith("/")) url += "/";
             return url;
-        }
-
-        private static string? TryReadStringProperty(object obj, string propName)
-        {
-            try
-            {
-                var p = obj.GetType().GetProperty(propName);
-                if (p == null) return null;
-                return p.GetValue(obj) as string;
-            }
-            catch
-            {
-                return null;
-            }
         }
 
         private bool ValidateRoleForDeviceMode(string? role)

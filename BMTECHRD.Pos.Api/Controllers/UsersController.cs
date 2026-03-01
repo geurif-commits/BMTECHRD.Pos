@@ -53,9 +53,12 @@ public sealed class UsersController : ControllerBase
         string? pinHash = null;
         if (!string.IsNullOrEmpty(req.Pin4))
         {
-            if (req.Pin4.Length != 4 || !req.Pin4.All(char.IsDigit)) return BadRequest("Pin must be exactly 4 digits");
+            if (req.Pin4.Length < 4 || req.Pin4.Length > 12 || !req.Pin4.All(char.IsDigit)) return BadRequest("Pin must be numeric with 4 to 12 digits");
             pinHash = _hasher.Hash(req.Pin4);
         }
+
+        if (string.IsNullOrWhiteSpace(req.Password) || req.Password.Length < 4 || req.Password.Length > 12)
+            return BadRequest("Password must contain between 4 and 12 characters");
 
         // map role
         if (!Enum.TryParse<UserRole>(req.Role, true, out var role)) return BadRequest("Invalid role");
@@ -117,6 +120,8 @@ public sealed class UsersController : ControllerBase
         var user = await _ctx.Users.FirstOrDefaultAsync(u => u.Id == id && u.BusinessId == req.BusinessId);
         if (user == null) return NotFound();
 
+        if (string.IsNullOrWhiteSpace(req.NewPassword) || req.NewPassword.Length < 4 || req.NewPassword.Length > 12) return BadRequest("Password must contain between 4 and 12 characters");
+
         user.PasswordHash = _hasher.Hash(req.NewPassword);
         user.UpdatedAt = DateTime.UtcNow;
         await _ctx.SaveChangesAsync();
@@ -130,7 +135,7 @@ public sealed class UsersController : ControllerBase
         if (actor == null || actor.BusinessId != req.BusinessId) return Forbid();
         if (!(actor.Role == UserRole.ADMIN || actor.Role == UserRole.SUPERVISOR)) return Forbid();
 
-        if (string.IsNullOrEmpty(req.NewPin4) || req.NewPin4.Length != 4 || !req.NewPin4.All(char.IsDigit)) return BadRequest("Pin must be exactly 4 digits");
+        if (string.IsNullOrEmpty(req.NewPin4) || req.NewPin4.Length < 4 || req.NewPin4.Length > 12 || !req.NewPin4.All(char.IsDigit)) return BadRequest("Pin must be numeric with 4 to 12 digits");
 
         var user = await _ctx.Users.FirstOrDefaultAsync(u => u.Id == id && u.BusinessId == req.BusinessId);
         if (user == null) return NotFound();

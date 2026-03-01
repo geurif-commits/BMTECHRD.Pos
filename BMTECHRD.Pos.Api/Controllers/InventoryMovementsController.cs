@@ -1,12 +1,11 @@
-using BMTECHRD.Pos.Application.DTOs;
-using BMTECHRD.Pos.Infrastructure.Persistence;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.SignalR;
 using BMTECHRD.Pos.Api.Hubs;
 using BMTECHRD.Pos.Application.DTOs;
 using BMTECHRD.Pos.Domain.Entities;
 using BMTECHRD.Pos.Domain.Enums;
+using BMTECHRD.Pos.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 
 namespace BMTECHRD.Pos.Api.Controllers;
 
@@ -16,11 +15,6 @@ public sealed class InventoryMovementsController : ControllerBase
 {
     private readonly AppDbContext _ctx;
     private readonly IHubContext<PosHub> _hub;
-
-    public InventoryMovementsController(AppDbContext ctx)
-    {
-        _ctx = ctx;
-    }
 
     public InventoryMovementsController(AppDbContext ctx, IHubContext<PosHub> hub)
     {
@@ -35,7 +29,7 @@ public sealed class InventoryMovementsController : ControllerBase
         if (take <= 0) take = 200;
         if (take > 1000) take = 1000;
 
-        var query = _ctx.InventoryMovements.AsQueryable().Where(m => m.BusinessId == businessId);
+        var query = _ctx.InventoryMovements.AsNoTracking().Where(m => m.BusinessId == businessId);
         if (productId.HasValue) query = query.Where(m => m.ProductId == productId.Value);
         if (from.HasValue) query = query.Where(m => m.CreatedAt >= from.Value);
         if (to.HasValue) query = query.Where(m => m.CreatedAt <= to.Value);
@@ -61,7 +55,7 @@ public sealed class InventoryMovementsController : ControllerBase
     [HttpGet("stock")]
     public async Task<IActionResult> GetStock([FromQuery] Guid businessId)
     {
-        var products = await _ctx.Products.Where(p => p.BusinessId == businessId).ToListAsync();
+        var products = await _ctx.Products.AsNoTracking().Where(p => p.BusinessId == businessId).ToListAsync();
         var list = products.Select(p => new StockItemDto
         {
             ProductId = p.Id,
@@ -69,16 +63,16 @@ public sealed class InventoryMovementsController : ControllerBase
             Stock = p.Stock,
             TrackInventory = p.TrackInventory
         }).ToList();
+
         return Ok(list);
     }
 
     [HttpPost("adjust")]
     public async Task<IActionResult> Adjust([FromBody] InventoryAdjustRequest req)
     {
-        // basic validation
         var actor = await _ctx.Users.FindAsync(req.ActorUserId);
         if (actor == null || actor.BusinessId != req.BusinessId) return Forbid();
-        if (!(actor.Role == UserRole.ADMIN || actor.Role == UserRole.SUPERVISOR)) return Forbid();
+        if (actor.Role != UserRole.ADMIN && actor.Role != UserRole.SUPERVISOR) return Forbid();
 
         var product = await _ctx.Products.FirstOrDefaultAsync(p => p.Id == req.ProductId && p.BusinessId == req.BusinessId);
         if (product == null) return BadRequest("Product not found");
@@ -87,28 +81,24 @@ public sealed class InventoryMovementsController : ControllerBase
         if (product.TrackInventory && product.Stock + req.QuantityDelta < 0)
             return BadRequest("Insufficient stock for adjustment");
 
-        // apply
         product.Stock += req.QuantityDelta;
 
         var mov = new InventoryMovement
         {
-            Id = System.Guid.NewGuid(),
+            Id = Guid.NewGuid(),
             BusinessId = req.BusinessId,
             ProductId = req.ProductId,
             QuantityDelta = req.QuantityDelta,
             Reason = req.Reason,
             ActorUserId = req.ActorUserId,
-            CreatedAt = System.DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow
         };
+
         _ctx.InventoryMovements.Add(mov);
         await _ctx.SaveChangesAsync();
 
-        // notify
-        if (_hub != null)
-        {
-            await _hub.Clients.Group(req.BusinessId.ToString()).SendAsync("inventory.updated");
-            await _hub.Clients.Group(req.BusinessId.ToString()).SendAsync("tables.updated");
-        }
+        await _hub.Clients.Group(req.BusinessId.ToString()).SendAsync("inventory.updated");
+        await _hub.Clients.Group(req.BusinessId.ToString()).SendAsync("tables.updated");
 
         return Ok(new { productId = product.Id, product.Stock });
     }

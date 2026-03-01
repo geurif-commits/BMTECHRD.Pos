@@ -1,3 +1,4 @@
+using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -9,9 +10,8 @@ namespace BMTECHRD.Pos.App.Controls;
 public partial class DraggableTableControl : UserControl
 {
     private bool _isDragging;
+    private bool _moved;
     private Point _startMousePos;
-    private double _startX;
-    private double _startY;
 
     public DraggableTableControl()
     {
@@ -21,78 +21,76 @@ public partial class DraggableTableControl : UserControl
 
     private void DraggableTableControl_Loaded(object sender, RoutedEventArgs e)
     {
-        if (DataContext is TableModel model)
-        {
-            // show badge if waiter name present
-            Badge.Visibility = string.IsNullOrEmpty(model.WaiterName) ? Visibility.Collapsed : Visibility.Visible;
-
-            // set color based on status
-            if (string.Equals(model.Status, "OPEN", System.StringComparison.OrdinalIgnoreCase))
-            {
-                RootBorder.Background = new SolidColorBrush(Color.FromRgb(220, 38, 38)); // red
-            }
-            else
-            {
-                RootBorder.Background = new SolidColorBrush(Color.FromRgb(56, 142, 60)); // green
-            }
-        }
+        ApplyVisualState();
 
         RootBorder.MouseLeftButtonDown += RootBorder_MouseLeftButtonDown;
         RootBorder.MouseMove += RootBorder_MouseMove;
         RootBorder.MouseLeftButtonUp += RootBorder_MouseLeftButtonUp;
-        RootBorder.MouseLeftButtonUp += RootBorder_MouseClick;
+    }
+
+    private void ApplyVisualState()
+    {
+        if (DataContext is not TableModel model) return;
+
+        Badge.Visibility = string.IsNullOrWhiteSpace(model.WaiterName) ? Visibility.Collapsed : Visibility.Visible;
+
+        if (string.Equals(model.Status, "OPEN", StringComparison.OrdinalIgnoreCase))
+        {
+            RootBorder.Background = new SolidColorBrush(Color.FromRgb(30, 58, 138));
+            RootBorder.BorderBrush = new SolidColorBrush(Color.FromRgb(96, 165, 250));
+            return;
+        }
+
+        RootBorder.Background = new SolidColorBrush(Color.FromRgb(6, 78, 59));
+        RootBorder.BorderBrush = new SolidColorBrush(Color.FromRgb(52, 211, 153));
     }
 
     private void RootBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         _isDragging = true;
-        _startMousePos = e.GetPosition(null);
-        if (DataContext is TableModel model)
-        {
-            _startX = model.PosX;
-            _startY = model.PosY;
-        }
+        _moved = false;
+        _startMousePos = e.GetPosition(FindParent<Canvas>(this) ?? this.Parent as UIElement);
         RootBorder.CaptureMouse();
     }
 
     private void RootBorder_MouseMove(object sender, MouseEventArgs e)
     {
         if (!_isDragging) return;
-        var pos = e.GetPosition(this.Parent as UIElement);
-        if (DataContext is TableModel model)
+
+        var canvas = FindParent<Canvas>(this);
+        if (canvas == null || DataContext is not TableModel model) return;
+
+        var pos = e.GetPosition(canvas);
+        if (!_moved && (Math.Abs(pos.X - _startMousePos.X) > 4 || Math.Abs(pos.Y - _startMousePos.Y) > 4))
         {
-            model.PosX = pos.X - (this.ActualWidth / 2);
-            model.PosY = pos.Y - (this.ActualHeight / 2);
+            _moved = true;
+        }
+
+        if (_moved)
+        {
+            model.PosX = pos.X - (ActualWidth / 2);
+            model.PosY = pos.Y - (ActualHeight / 2);
         }
     }
 
     private void RootBorder_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
         if (!_isDragging) return;
+
         _isDragging = false;
         RootBorder.ReleaseMouseCapture();
 
-        // invoke update command if available on DataContext
-        if (DataContext is TableModel model)
-        {
-            // try to find command on parent DataContext (TablesMapViewModel)
-            if (FindParent<FrameworkElement>(this) is FrameworkElement fe && fe.DataContext is BMTECHRD.Pos.App.ViewModels.TablesMapViewModel vm)
-            {
-                vm.UpdatePositionCommand.Execute(model);
-            }
-        }
-    }
+        if (DataContext is not TableModel model) return;
 
-    private void RootBorder_MouseClick(object sender, MouseButtonEventArgs e)
-    {
-        // handle click (open or access)
-        if (DataContext is TableModel model)
+        if (FindParent<FrameworkElement>(this)?.DataContext is not BMTECHRD.Pos.App.ViewModels.TablesMapViewModel vm) return;
+
+        if (_moved)
         {
-            if (FindParent<FrameworkElement>(this) is FrameworkElement fe && fe.DataContext is BMTECHRD.Pos.App.ViewModels.TablesMapViewModel vm)
-            {
-                vm.OpenOrAccessTableCommand.Execute(model);
-            }
+            vm.UpdatePositionCommand.Execute(model);
+            return;
         }
+
+        vm.OpenOrAccessTableCommand.Execute(model);
     }
 
     private static T? FindParent<T>(DependencyObject child) where T : DependencyObject

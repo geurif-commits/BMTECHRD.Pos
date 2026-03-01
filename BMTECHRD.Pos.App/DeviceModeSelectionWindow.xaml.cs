@@ -13,12 +13,27 @@ public partial class DeviceModeSelectionWindow : Window
     {
         InitializeComponent();
         _configService = new LocalDeviceConfigService();
+
+        var current = _configService.Load();
+        TxtApiBaseUrl.Text = current?.ApiBaseUrl ?? LocalDeviceConfigService.DefaultApiBaseUrl;
     }
 
     private void SelectMode(DeviceMode mode)
     {
-        _configService.Save(mode);
-        System.Windows.Application.Current.Shutdown(0);
+        var rawUrl = TxtApiBaseUrl.Text?.Trim();
+        if (string.IsNullOrWhiteSpace(rawUrl))
+            rawUrl = LocalDeviceConfigService.DefaultApiBaseUrl;
+
+        if (!Uri.TryCreate(rawUrl, UriKind.Absolute, out _))
+        {
+            MessageBox.Show("La URL API no es válida. Ejemplo: http://localhost:5139/", "URL inválida", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        _configService.Save(mode, rawUrl);
+
+        DialogResult = true;
+        Close();
     }
 
     private void OnServerClick(object sender, RoutedEventArgs e) => SelectMode(DeviceMode.Server);

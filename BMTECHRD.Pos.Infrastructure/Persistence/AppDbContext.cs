@@ -25,6 +25,7 @@ public sealed class AppDbContext : DbContext
 
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<FiscalDocument> FiscalDocuments => Set<FiscalDocument>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

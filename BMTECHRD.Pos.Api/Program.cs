@@ -92,11 +92,13 @@ app.UseHttpsRedirection();
 
 app.UseStaticFiles();
 
+// Authentication first so middleware can read claims (businessId from token)
+app.UseAuthentication();
+
 // License enforcement middleware
 app.UseMiddleware<BMTECHRD.Pos.Api.Middleware.LicenseMiddleware>();
 
-// Authentication & Authorization (BLOQUE 4)
-app.UseAuthentication();
+// Authorization
 app.UseAuthorization();
 
 app.UseApiDefaults();
@@ -164,6 +166,37 @@ if (app.Environment.IsDevelopment())
         ctx.Tables.AddRange(tables);
 
         ctx.SaveChanges();
+    }
+    else
+    {
+        // Ensure each business has a license record (legacy DB safety)
+        var businessesWithoutLicense = ctx.Businesses
+            .Where(b => !ctx.Licenses.Any(l => l.BusinessId == b.Id))
+            .ToList();
+
+        if (businessesWithoutLicense.Count > 0)
+        {
+            foreach (var b in businessesWithoutLicense)
+            {
+                var fallbackKey = b.Name == "BMTECHRD DEMO"
+                    ? "BMT-DEMO-00000"
+                    : $"BMT-{b.Id:N}"[..14].ToUpperInvariant();
+
+                ctx.Licenses.Add(new BMTECHRD.Pos.Domain.Entities.License
+                {
+                    Id = Guid.NewGuid(),
+                    BusinessId = b.Id,
+                    Business = b,
+                    Plan = BMTECHRD.Pos.Domain.Enums.LicensePlan.TRIAL_7_DAYS,
+                    Status = BMTECHRD.Pos.Domain.Enums.LicenseStatus.INACTIVE,
+                    ActivationKey = fallbackKey,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                });
+            }
+
+            ctx.SaveChanges();
+        }
     }
 }
 

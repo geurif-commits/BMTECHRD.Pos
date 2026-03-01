@@ -5,13 +5,16 @@ using BMTECHRD.Pos.App.Core;
 
 namespace BMTECHRD.Pos.App.Services;
 
-public class DeviceConfig
+public sealed class LocalDeviceConfig
 {
     public DeviceMode Mode { get; set; }
+    public string ApiBaseUrl { get; set; } = LocalDeviceConfigService.DefaultApiBaseUrl;
 }
 
 public sealed class LocalDeviceConfigService
 {
+    public const string DefaultApiBaseUrl = "http://localhost:5139/";
+
     private readonly string _configPath;
     private readonly string _configFolder;
 
@@ -33,7 +36,7 @@ public sealed class LocalDeviceConfigService
         return _configPath;
     }
 
-    public DeviceConfig? Load()
+    public LocalDeviceConfig? Load()
     {
         try
         {
@@ -41,12 +44,14 @@ public sealed class LocalDeviceConfigService
                 return null;
 
             var json = File.ReadAllText(_configPath);
-            var config = JsonSerializer.Deserialize<DeviceConfig>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var config = JsonSerializer.Deserialize<LocalDeviceConfig>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (config == null) return null;
+
+            config.ApiBaseUrl = NormalizeBaseUrl(config.ApiBaseUrl) ?? DefaultApiBaseUrl;
             return config;
         }
         catch (JsonException)
         {
-            // Archivo corrupto: renombrarlo a .bak con timestamp
             BackupCorruptedFile();
             return null;
         }
@@ -56,11 +61,16 @@ public sealed class LocalDeviceConfigService
         }
     }
 
-    public void Save(DeviceMode mode)
+    public void Save(DeviceMode mode, string? apiBaseUrl = null)
     {
         try
         {
-            var config = new DeviceConfig { Mode = mode };
+            var config = new LocalDeviceConfig
+            {
+                Mode = mode,
+                ApiBaseUrl = NormalizeBaseUrl(apiBaseUrl) ?? DefaultApiBaseUrl
+            };
+
             var json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(_configPath, json);
         }
@@ -79,13 +89,22 @@ public sealed class LocalDeviceConfigService
                 File.Delete(_configPath);
             }
 
-            // Opcionalmente, limpiar backups antiguos
             CleanupOldBackups();
         }
         catch (Exception ex)
         {
             throw new InvalidOperationException($"Error reseteando configuración: {ex.Message}", ex);
         }
+    }
+
+    private static string? NormalizeBaseUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return null;
+
+        url = url.Trim();
+        if (!url.EndsWith('/')) url += "/";
+
+        return url;
     }
 
     private void BackupCorruptedFile()
@@ -101,7 +120,6 @@ public sealed class LocalDeviceConfigService
         }
         catch
         {
-            // Ignorar errores al hacer backup
         }
     }
 
@@ -123,14 +141,12 @@ public sealed class LocalDeviceConfigService
                     }
                     catch
                     {
-                        // Ignorar errores al limpiar
                     }
                 }
             }
         }
         catch
         {
-            // Ignorar errores
         }
     }
 }

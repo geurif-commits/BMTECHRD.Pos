@@ -123,7 +123,8 @@ public sealed class UsersAdminViewModel : ViewModelBase
         Error = null; SuccessMessage = null;
         if (string.IsNullOrWhiteSpace(NewUsername)) { Error = "Username required"; return; }
         if (string.IsNullOrWhiteSpace(NewPassword)) { Error = "Password required"; return; }
-        if (!string.IsNullOrEmpty(NewPin4) && (NewPin4.Length != 4 || !NewPin4.All(char.IsDigit))) { Error = "PIN must be 4 digits"; return; }
+        if (!string.IsNullOrEmpty(NewPin4) && (NewPin4.Length < 4 || NewPin4.Length > 12 || !NewPin4.All(char.IsDigit))) { Error = "PIN must be numeric with 4 to 12 digits"; return; }
+        if (NewPassword.Length < 4 || NewPassword.Length > 12) { Error = "Password must contain between 4 and 12 characters"; return; }
 
         IsBusy = true; OnPropertyChanged(nameof(IsBusy));
         try
@@ -159,6 +160,7 @@ public sealed class UsersAdminViewModel : ViewModelBase
     {
         if (SelectedUser == null) return;
         if (string.IsNullOrWhiteSpace(ResetPasswordValue)) { Error = "New password required"; return; }
+        if (ResetPasswordValue.Length < 4 || ResetPasswordValue.Length > 12) { Error = "Password must contain between 4 and 12 characters"; return; }
         IsBusy = true; Error = null;
         try
         {
@@ -175,7 +177,7 @@ public sealed class UsersAdminViewModel : ViewModelBase
     public async Task ResetPinAsync()
     {
         if (SelectedUser == null) return;
-        if (string.IsNullOrWhiteSpace(ResetPinValue) || ResetPinValue.Length != 4 || !ResetPinValue.All(char.IsDigit)) { Error = "New PIN must be 4 digits"; return; }
+        if (string.IsNullOrWhiteSpace(ResetPinValue) || ResetPinValue.Length < 4 || ResetPinValue.Length > 12 || !ResetPinValue.All(char.IsDigit)) { Error = "New PIN must be numeric with 4 to 12 digits"; return; }
         IsBusy = true; Error = null;
         try
         {

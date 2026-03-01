@@ -23,20 +23,38 @@ public sealed class CashierController : ControllerBase
     [HttpGet("tables")]
     public async Task<IActionResult> GetOpenTables([FromQuery] Guid businessId)
     {
-        var tables = await _ctx.Tables.Where(t => t.BusinessId == businessId && t.Status.ToString() == "OPEN").ToListAsync();
+        if (businessId == Guid.Empty) return BadRequest("businessId is required");
+
+        var tables = await _ctx.Tables
+            .AsNoTracking()
+            .Where(t => t.BusinessId == businessId && t.Status == BMTECHRD.Pos.Domain.Enums.TableStatus.OPEN)
+            .ToListAsync();
+
         var res = new List<TableSummaryDto>();
         foreach (var t in tables)
         {
-            var items = await _ctx.OrderItems.Where(oi => oi.BusinessId == businessId && oi.OrderId != Guid.Empty && oi.Status != BMTECHRD.Pos.Domain.Enums.OrderItemStatus.CANCELLED && _ctx.Orders.Any(o => o.Id == oi.OrderId && o.TableId == t.Id)).ToListAsync();
-            // simpler: get items by joining orders
-            var orderIds = await _ctx.Orders.Where(o => o.TableId == t.Id).Select(o => o.Id).ToListAsync();
-            var relevant = await _ctx.OrderItems.Where(oi => orderIds.Contains(oi.OrderId) && oi.Status != BMTECHRD.Pos.Domain.Enums.OrderItemStatus.CANCELLED).ToListAsync();
+            var orderIds = await _ctx.Orders
+                .AsNoTracking()
+                .Where(o => o.TableId == t.Id)
+                .Select(o => o.Id)
+                .ToListAsync();
+
+            var relevant = await _ctx.OrderItems
+                .AsNoTracking()
+                .Where(oi => orderIds.Contains(oi.OrderId) && oi.Status != BMTECHRD.Pos.Domain.Enums.OrderItemStatus.CANCELLED)
+                .ToListAsync();
+
             var total = relevant.Sum(r => r.UnitPriceSnapshot * r.Quantity);
             var count = relevant.Sum(r => r.Quantity);
-            // detect pending items (SENT or IN_PROGRESS)
-            var hasPending = await _ctx.OrderItems.AnyAsync(oi => orderIds.Contains(oi.OrderId) && (oi.Status == BMTECHRD.Pos.Domain.Enums.OrderItemStatus.SENT || oi.Status == BMTECHRD.Pos.Domain.Enums.OrderItemStatus.IN_PROGRESS));
+
+            var hasPending = await _ctx.OrderItems
+                .AsNoTracking()
+                .AnyAsync(oi => orderIds.Contains(oi.OrderId)
+                    && (oi.Status == BMTECHRD.Pos.Domain.Enums.OrderItemStatus.SENT || oi.Status == BMTECHRD.Pos.Domain.Enums.OrderItemStatus.IN_PROGRESS));
+
             res.Add(new TableSummaryDto { TableId = t.Id, TableNumber = t.Number, Status = t.Status.ToString(), CurrentTotal = total, ItemsCount = count, HasPendingItems = hasPending });
         }
+
         return Ok(res);
     }
 
@@ -64,8 +82,9 @@ public sealed class CashierController : ControllerBase
             }).ToList();
 
         var subtotal = lines.Sum(l => l.LineTotal);
-        var tax = 0m; // for now
-        var tip = 0m;
+        var business = await _ctx.Businesses.FirstOrDefaultAsync(b => b.Id == businessId);
+        var tax = business != null && business.EnableItbis ? Math.Round(subtotal * business.ItbisRate, 2) : 0m;
+        var tip = business != null && business.EnableTip ? Math.Round(subtotal * business.TipRate, 2) : 0m;
         var discount = 0m;
         var total = subtotal + tax + tip - discount;
 
@@ -113,7 +132,10 @@ public sealed class CashierController : ControllerBase
         var orderIdsBefore = ordersBefore.Select(o => o.Id).ToList();
         var itemsBefore = await _ctx.OrderItems.Where(oi => orderIdsBefore.Contains(oi.OrderId) && oi.Status != BMTECHRD.Pos.Domain.Enums.OrderItemStatus.CANCELLED).ToListAsync();
         var subtotalBefore = itemsBefore.Sum(i => i.UnitPriceSnapshot * i.Quantity);
-        var totalBefore = subtotalBefore; // tax/tip/discount omitted
+        var businessCfg = await _ctx.Businesses.FirstOrDefaultAsync(b => b.Id == req.BusinessId);
+        var taxBefore = businessCfg != null && businessCfg.EnableItbis ? Math.Round(subtotalBefore * businessCfg.ItbisRate, 2) : 0m;
+        var tipBefore = businessCfg != null && businessCfg.EnableTip ? Math.Round(subtotalBefore * businessCfg.TipRate, 2) : 0m;
+        var totalBefore = subtotalBefore + taxBefore + tipBefore;
         var paidBefore = await _ctx.Payments.Where(p => p.TableId == req.TableId && p.BusinessId == req.BusinessId).SumAsync(p => p.Amount);
         var dueBefore = totalBefore - paidBefore;
 
@@ -146,7 +168,9 @@ public sealed class CashierController : ControllerBase
         var orderIds = orders.Select(o => o.Id).ToList();
         var items = await _ctx.OrderItems.Where(oi => orderIds.Contains(oi.OrderId) && oi.Status != BMTECHRD.Pos.Domain.Enums.OrderItemStatus.CANCELLED).ToListAsync();
         var subtotal = items.Sum(i => i.UnitPriceSnapshot * i.Quantity);
-        var total = subtotal; // tax/tip/discount omitted
+        var tax = businessCfg != null && businessCfg.EnableItbis ? Math.Round(subtotal * businessCfg.ItbisRate, 2) : 0m;
+        var tip = businessCfg != null && businessCfg.EnableTip ? Math.Round(subtotal * businessCfg.TipRate, 2) : 0m;
+        var total = subtotal + tax + tip;
         var due = total - paid;
 
         var closed = false;
@@ -197,7 +221,10 @@ public sealed class CashierController : ControllerBase
         var orderIds = orders.Select(o => o.Id).ToList();
         var items = await _ctx.OrderItems.Where(oi => orderIds.Contains(oi.OrderId) && oi.Status != BMTECHRD.Pos.Domain.Enums.OrderItemStatus.CANCELLED).ToListAsync();
         var subtotal = items.Sum(i => i.UnitPriceSnapshot * i.Quantity);
-        var total = subtotal;
+        var businessCfg = await _ctx.Businesses.FirstOrDefaultAsync(b => b.Id == req.BusinessId);
+        var tax = businessCfg != null && businessCfg.EnableItbis ? Math.Round(subtotal * businessCfg.ItbisRate, 2) : 0m;
+        var tip = businessCfg != null && businessCfg.EnableTip ? Math.Round(subtotal * businessCfg.TipRate, 2) : 0m;
+        var total = subtotal + tax + tip;
         var due = total - paid;
 
         if (due > 0) return BadRequest("Due amount must be paid before closing table");

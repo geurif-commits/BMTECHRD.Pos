@@ -1,14 +1,42 @@
 <UserControl x:Class="BMTECHRD.Pos.App.Controls.DraggableTableControl"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:BMTECHRD.Pos.App.Controls"
-             Width="120" Height="80">
+             Width="130" Height="92">
     <Grid>
-        <Border x:Name="RootBorder" CornerRadius="8" Padding="8" Background="#FF2D2F31" BorderBrush="#FF444444" BorderThickness="1">
+        <Border x:Name="RootBorder"
+                CornerRadius="12"
+                Padding="10"
+                Background="#1F2937"
+                BorderBrush="#4B5563"
+                BorderThickness="1.2">
             <Grid>
-                <TextBlock Text="{Binding Number}" FontSize="28" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                <Border x:Name="Badge" Background="#FF4CAF50" CornerRadius="6" HorizontalAlignment="Right" VerticalAlignment="Top" Padding="6" Margin="0,-10,-10,0" Visibility="Collapsed">
-                    <TextBlock Text="{Binding WaiterName}" Foreground="White" FontSize="12"/>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <DockPanel>
+                    <TextBlock Text="Mesa" Foreground="#E5E7EB" FontWeight="SemiBold"/>
+                    <TextBlock DockPanel.Dock="Right" FontFamily="Segoe Fluent Icons" Text="&#xE7F4;" Foreground="#93C5FD" FontSize="16"/>
+                </DockPanel>
+
+                <TextBlock Grid.Row="1"
+                           Text="{Binding Number}"
+                           FontSize="30"
+                           FontWeight="Bold"
+                           Foreground="White"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"/>
+
+                <Border x:Name="Badge"
+                        Background="#2563EB"
+                        CornerRadius="7"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Padding="6,2"
+                        Margin="0,-8,-8,0"
+                        Visibility="Collapsed">
+                    <TextBlock Text="{Binding WaiterName}" Foreground="White" FontSize="11" FontWeight="SemiBold"/>
                 </Border>
             </Grid>
         </Border>

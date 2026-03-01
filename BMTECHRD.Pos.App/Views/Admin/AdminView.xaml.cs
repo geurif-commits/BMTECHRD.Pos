@@ -51,6 +51,7 @@ public partial class AdminView : UserControl, INotifyPropertyChanged
         InventoryView.Initialize(api, businessId);
         ShiftsView.Initialize(api, businessId, actorUserId);
         ReportsView.Initialize(api, businessId, actorUserId);
+        BusinessSettingsView.Initialize(api, businessId);
     }
 
     private void OnConfigureDeviceClick(object sender, RoutedEventArgs e)

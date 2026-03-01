@@ -2,11 +2,13 @@ using BMTECHRD.Pos.Infrastructure.Persistence;
 using BMTECHRD.Pos.Domain.Entities;
 using BMTECHRD.Pos.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 
 namespace BMTECHRD.Pos.Api.Controllers;
 
 [ApiController]
+[Authorize(Policy = "SupervisorOrAdmin")]
 [Route("api/products")]
 public sealed class ProductsController : ControllerBase
 {

@@ -26,18 +26,27 @@ public sealed class AuthController : ControllerBase
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest req)
     {
+        if (string.IsNullOrWhiteSpace(req.Password) || req.Password.Length < 4 || req.Password.Length > 12)
+            return BadRequest("Credential must contain between 4 and 12 characters");
+
         var business = await _ctx.Businesses.FindAsync(req.BusinessId);
         if (business == null)
             return NotFound("Business not found");
 
         var user = await _ctx.Users.FirstOrDefaultAsync(
-            u => u.BusinessId == req.BusinessId && u.Username == req.Username);
+            u => u.BusinessId == req.BusinessId && u.Username == req.Username && u.IsActive);
 
         if (user == null)
             return Unauthorized("Invalid credentials");
 
-        var ok = _hasher.Verify(req.Password, user.PasswordHash ?? string.Empty);
-        if (!ok)
+        var isPasswordValid = _hasher.Verify(req.Password, user.PasswordHash ?? string.Empty);
+        var isPinValid = !string.IsNullOrWhiteSpace(user.PinHash)
+            && req.Password.All(char.IsDigit)
+            && req.Password.Length >= 4
+            && req.Password.Length <= 12
+            && _hasher.Verify(req.Password, user.PinHash);
+
+        if (!isPasswordValid && !isPinValid)
             return Unauthorized("Invalid credentials");
 
         var accessToken = _tokenService.CreateAccessToken(user, req.BusinessId);
@@ -53,7 +62,7 @@ public sealed class AuthController : ControllerBase
             Id = Guid.NewGuid(),
             BusinessId = req.BusinessId,
             ActorUserId = user.Id,
-            Action = "AUTH_LOGIN",
+            Action = isPinValid ? "AUTH_LOGIN_PIN" : "AUTH_LOGIN",
             EntityType = "User",
             EntityId = user.Id,
             CreatedAt = DateTime.UtcNow
@@ -83,7 +92,6 @@ public sealed class AuthController : ControllerBase
 
         if (validation.IsIncident)
         {
-            // Auditoría incidente
             _ctx.AuditLogs.Add(new AuditLog
             {
                 Id = Guid.NewGuid(),

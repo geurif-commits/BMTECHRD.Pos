@@ -1,36 +1,41 @@
 using BMTECHRD.Pos.Application.Abstractions.Security;
-using Microsoft.AspNetCore.Http;
+using System.Security.Claims;
 
 namespace BMTECHRD.Pos.Api.Middleware;
 
 public sealed class LicenseMiddleware
 {
     private readonly RequestDelegate _next;
-    private readonly ILicenseService _licenseService;
 
-    public LicenseMiddleware(RequestDelegate next, ILicenseService licenseService)
+    public LicenseMiddleware(RequestDelegate next)
     {
         _next = next;
-        _licenseService = licenseService;
     }
 
-    public async Task Invoke(HttpContext context)
+    public async Task InvokeAsync(HttpContext context, ILicenseService licenseService)
     {
         var path = context.Request.Path.Value ?? string.Empty;
-        // allow health, license activation, public business list, auth login and swagger
-        if (path.StartsWith("/api/health") || path.StartsWith("/api/license/activate") || path.StartsWith("/api/business/public") || path.StartsWith("/api/auth/login") || path.StartsWith("/swagger"))
+
+        if (path.StartsWith("/api/health")
+            || path.StartsWith("/api/license/activate")
+            || path.StartsWith("/api/license/status")
+            || path.StartsWith("/api/license/alerts")
+            || path.StartsWith("/api/business/public")
+            || path.StartsWith("/api/auth/login")
+            || path.StartsWith("/api/auth/refresh")
+            || path.StartsWith("/api/auth/logout")
+            || path.StartsWith("/swagger"))
         {
             await _next(context);
             return;
         }
 
-        // Try to get businessId from query or header
         string? businessIdStr = context.Request.Query["businessId"].FirstOrDefault();
+        if (string.IsNullOrEmpty(businessIdStr) && context.Request.Headers.TryGetValue("X-Business-Id", out var vals))
+            businessIdStr = vals.FirstOrDefault();
+
         if (string.IsNullOrEmpty(businessIdStr))
-        {
-            if (context.Request.Headers.TryGetValue("X-Business-Id", out var vals))
-                businessIdStr = vals.FirstOrDefault();
-        }
+            businessIdStr = context.User.FindFirst("bid")?.Value ?? context.User.FindFirst(ClaimTypes.GroupSid)?.Value;
 
         if (string.IsNullOrEmpty(businessIdStr))
         {
@@ -46,7 +51,7 @@ public sealed class LicenseMiddleware
             return;
         }
 
-        var active = await _licenseService.IsBusinessActiveAsync(businessId, context.RequestAborted);
+        var active = await licenseService.IsBusinessActiveAsync(businessId, context.RequestAborted);
         if (!active)
         {
             context.Response.StatusCode = 403;

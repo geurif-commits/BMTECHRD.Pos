@@ -15,6 +15,8 @@ public sealed class ApiClient
         _http = http;
     }
 
+    public Uri? BaseAddress => _http.BaseAddress;
+
     public async Task<List<TableModel>> GetTablesAsync(Guid businessId)
     {
         var url = $"api/tables?businessId={businessId}";
@@ -56,6 +58,26 @@ public sealed class ApiClient
         var resp = await _http.PostAsJsonAsync("api/auth/login", req);
         if (!resp.IsSuccessStatusCode) return null;
         return await resp.Content.ReadFromJsonAsync<LoginResponse>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+    }
+
+
+    public async Task<List<MenuCategoryModel>> GetCategoriesAsync(Guid businessId)
+    {
+        var list = await _http.GetFromJsonAsync<List<MenuCategoryModel>>($"api/categories?businessId={businessId}", new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        return list ?? new List<MenuCategoryModel>();
+    }
+
+    public async Task<List<MenuProductModel>> GetProductsAsync(Guid businessId)
+    {
+        var list = await _http.GetFromJsonAsync<List<MenuProductModel>>($"api/products?businessId={businessId}&active=true", new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        return list ?? new List<MenuProductModel>();
+    }
+
+    public async Task<CreateOrderBatchResponse?> CreateOrderBatchAsync(CreateOrderBatchRequest req)
+    {
+        var response = await _http.PostAsJsonAsync("api/orders/batch", req);
+        if (!response.IsSuccessStatusCode) return null;
+        return await response.Content.ReadFromJsonAsync<CreateOrderBatchResponse>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
     }
 
     public async Task<List<ProductionQueueItemModel>> GetKitchenQueueAsync(Guid businessId)
@@ -274,6 +296,29 @@ public sealed class ApiClient
         var dto = new ResetPinRequest { BusinessId = req.BusinessId, ActorUserId = req.ActorUserId, NewPin4 = req.NewPin4 };
         var resp = await _http.PostAsJsonAsync($"api/users/{userId}/reset-pin", dto);
         return resp.IsSuccessStatusCode;
+    }
+
+
+    public async Task<BusinessSettingsModel?> GetBusinessSettingsAsync(Guid businessId)
+    {
+        var response = await _http.GetAsync($"api/business/{businessId}/settings");
+        if (!response.IsSuccessStatusCode) return null;
+        return await response.Content.ReadFromJsonAsync<BusinessSettingsModel>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+    }
+
+    public async Task<bool> UpdateBusinessSettingsAsync(BusinessSettingsModel model)
+    {
+        using var form = new MultipartFormDataContent();
+        form.Add(new StringContent(model.Name), nameof(model.Name));
+        form.Add(new StringContent(model.EnableItbis.ToString()), nameof(model.EnableItbis));
+        form.Add(new StringContent(model.ItbisRate.ToString(System.Globalization.CultureInfo.InvariantCulture)), nameof(model.ItbisRate));
+        form.Add(new StringContent(model.EnableTip.ToString()), nameof(model.EnableTip));
+        form.Add(new StringContent(model.TipRate.ToString(System.Globalization.CultureInfo.InvariantCulture)), nameof(model.TipRate));
+        form.Add(new StringContent(model.EnableFiscalReceipt.ToString()), nameof(model.EnableFiscalReceipt));
+        form.Add(new StringContent(model.EnableElectronicInvoice.ToString()), nameof(model.EnableElectronicInvoice));
+
+        var response = await _http.PutAsync($"api/business/{model.BusinessId}/settings", form);
+        return response.IsSuccessStatusCode;
     }
 
     // Reports

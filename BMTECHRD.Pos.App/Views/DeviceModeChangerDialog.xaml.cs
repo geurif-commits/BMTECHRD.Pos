@@ -44,7 +44,8 @@ public partial class DeviceModeChangerDialog : Window
             }
 
             // 2) Guardar nueva configuración
-            _configService.Save(newMode);
+            var current = _configService.Load();
+            _configService.Save(newMode, current?.ApiBaseUrl);
 
             // 3) Mostrar mensaje
             MessageBox.Show($"Modo cambiado a {newMode}. La aplicación se reiniciará.", 
@@ -75,10 +76,15 @@ public partial class DeviceModeChangerDialog : Window
         try
         {
             // Obtener ruta del ejecutable actual
-            var exePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
-            if (string.IsNullOrEmpty(exePath))
+            var exePath = Environment.ProcessPath;
+            if (string.IsNullOrWhiteSpace(exePath))
             {
-                exePath = Environment.ProcessPath ?? throw new InvalidOperationException("Cannot determine executable path");
+                exePath = Process.GetCurrentProcess().MainModule?.FileName;
+            }
+
+            if (string.IsNullOrWhiteSpace(exePath))
+            {
+                throw new InvalidOperationException("Cannot determine executable path");
             }
 
             // Iniciar nueva instancia
