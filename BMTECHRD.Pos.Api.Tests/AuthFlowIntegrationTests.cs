@@ -46,8 +46,18 @@ public sealed class AuthFlowIntegrationTests : IClassFixture<WebApplicationFacto
         Assert.Equal("admin", username);
 
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        Console.WriteLine("ACCESS TOKEN: " + accessToken);
+        Console.WriteLine("AuthHeader: " + _client.DefaultRequestHeaders.Authorization?.ToString());
         var meResp = await _client.GetAsync("/api/auth/me");
-        Assert.Equal(HttpStatusCode.OK, meResp.StatusCode);
+        if (meResp.StatusCode != HttpStatusCode.OK)
+        {
+            var body = await meResp.Content.ReadAsStringAsync();
+            Console.WriteLine("ME RESPONSE STATUS: " + meResp.StatusCode);
+            Console.WriteLine("ME RESPONSE BODY:\n" + body);
+            foreach (var h in meResp.Headers)
+                Console.WriteLine($"ME HEADER: {h.Key}={string.Join(',', h.Value)}");
+            throw new InvalidOperationException($"Me failed: {meResp.StatusCode}");
+        }
 
         using var meDoc = JsonDocument.Parse(await meResp.Content.ReadAsStringAsync());
         var meBusinessId = meDoc.RootElement.GetProperty("businessId").GetGuid();

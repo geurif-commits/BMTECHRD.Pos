@@ -165,10 +165,10 @@ public sealed class AuthService : IAuthService
 
     public (Guid UserId, Guid BusinessId, string? Role, string? Username) Me(System.Security.Claims.ClaimsPrincipal user)
     {
-        var userId = user.FindFirst("sub")?.Value;
-        var businessId = user.FindFirst("bid")?.Value;
-        var role = user.FindFirst("role")?.Value;
-        var username = user.FindFirst("uname")?.Value;
+        var userId = user.FindFirst("sub")?.Value ?? user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        var businessId = user.FindFirst("bid")?.Value ?? user.FindFirst("bid")?.Value;
+        var role = user.FindFirst("role")?.Value ?? user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+        var username = user.FindFirst("uname")?.Value ?? user.Identity?.Name;
 
         if (!Guid.TryParse(userId, out var userIdGuid) || !Guid.TryParse(businessId, out var businessIdGuid))
             throw new ApiProblemException(StatusCodes.Status401Unauthorized, "Unauthorized", "Invalid auth claims", "AUTH_INVALID_CLAIMS");

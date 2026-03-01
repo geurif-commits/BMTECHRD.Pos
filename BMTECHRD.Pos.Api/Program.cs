@@ -20,11 +20,37 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Linq;
+using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
+
+// Capture model validation failures and log them to assist integration test diagnostics
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var logger = context.HttpContext.RequestServices.GetService<Microsoft.Extensions.Logging.ILogger<Program>>();
+        try
+        {
+            var errors = context.ModelState
+                .Where(kvp => kvp.Value.Errors.Count > 0)
+                .Select(kvp => new { Key = kvp.Key, Errors = kvp.Value.Errors.Select(e => e.ErrorMessage).ToArray() })
+                .ToArray();
+
+            logger?.LogInformation("[ModelValidation] Invalid model state for {Path}: {Errors}", context.HttpContext.Request.Path, System.Text.Json.JsonSerializer.Serialize(errors));
+        }
+        catch (Exception ex)
+        {
+            logger?.LogWarning(ex, "[ModelValidation] Failed to log model state");
+        }
+
+        return new BadRequestObjectResult(context.ModelState);
+    };
+});
 builder.Services.AddSignalR();
 builder.Services.AddScoped<IOrderBatchService, OrderBatchService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
@@ -121,13 +147,12 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseStaticFiles();
-
-// License enforcement middleware
-app.UseMiddleware<BMTECHRD.Pos.Api.Middleware.LicenseMiddleware>();
-
 // Authentication & Authorization (BLOQUE 4)
 app.UseAuthentication();
 app.UseAuthorization();
+
+// License enforcement middleware (runs after authentication so claims are available)
+app.UseMiddleware<BMTECHRD.Pos.Api.Middleware.LicenseMiddleware>();
 
 app.UseApiDefaults();
 
@@ -137,63 +162,110 @@ if (app.Environment.IsDevelopment())
     using var scope = app.Services.CreateScope();
     var ctx = scope.ServiceProvider.GetRequiredService<BMTECHRD.Pos.Infrastructure.Persistence.AppDbContext>();
     var hasher = scope.ServiceProvider.GetRequiredService<BMTECHRD.Pos.Application.Abstractions.Security.IPasswordHasher>();
+    var logger = scope.ServiceProvider.GetService<Microsoft.Extensions.Logging.ILogger<Program>>();
 
-    // ensure database created and migrations applied if any
-    ctx.Database.Migrate();
-
-    if (!ctx.Businesses.Any())
+    try
     {
-        var business = new BMTECHRD.Pos.Domain.Entities.Business
+        // ensure database created and migrations applied if any
+        logger?.LogInformation("[IntegrationSeed] Environment={Env}", app.Environment.EnvironmentName);
+        logger?.LogInformation("[IntegrationSeed] PasswordHasher={Hasher}", hasher?.GetType().FullName ?? "<null>");
+
+        ctx.Database.Migrate();
+
+        if (!ctx.Businesses.Any())
         {
-            Name = "BMTECHRD DEMO",
-            CurrencyCode = "DOP"
-        };
+            var business = new BMTECHRD.Pos.Domain.Entities.Business
+            {
+                Name = "BMTECHRD DEMO",
+                CurrencyCode = "DOP"
+            };
 
-        var license = new BMTECHRD.Pos.Domain.Entities.License
+            var license = new BMTECHRD.Pos.Domain.Entities.License
+            {
+                ActivationKey = "BMT-DEMO-00000",
+                Plan = BMTECHRD.Pos.Domain.Enums.LicensePlan.TRIAL_7_DAYS,
+                Status = BMTECHRD.Pos.Domain.Enums.LicenseStatus.INACTIVE,
+                Business = business
+            };
+            business.License = license;
+
+            ctx.Businesses.Add(business);
+
+            // admin
+            var admin = new BMTECHRD.Pos.Domain.Entities.User
+            {
+                Username = "admin",
+                PasswordHash = hasher.Hash("admin"),
+                PinHash = hasher.Hash("1234"),
+                Role = BMTECHRD.Pos.Domain.Enums.UserRole.ADMIN,
+                Business = business
+            };
+
+            var supervisor = new BMTECHRD.Pos.Domain.Entities.User
+            {
+                Username = "supervisor",
+                PasswordHash = hasher.Hash("supervisor"),
+                PinHash = hasher.Hash("1234"),
+                Role = BMTECHRD.Pos.Domain.Enums.UserRole.SUPERVISOR,
+                Business = business
+            };
+
+            ctx.Users.AddRange(admin, supervisor);
+
+            // 10 tables
+            var tables = Enumerable.Range(1, 10).Select(i => new BMTECHRD.Pos.Domain.Entities.Table
+            {
+                Business = business,
+                Number = i,
+                Status = BMTECHRD.Pos.Domain.Enums.TableStatus.AVAILABLE,
+                PosX = i * 10,
+                PosY = i * 5
+            }).ToList();
+
+            ctx.Tables.AddRange(tables);
+
+            ctx.SaveChanges();
+
+            // Log seeded users (include hashes for diagnostic purposes only)
+            try
+            {
+                var seeded = ctx.Users.Select(u => new { u.Username, u.PasswordHash, u.PinHash }).ToList();
+                logger?.LogInformation("[IntegrationSeed] Seeded users: {Count}", seeded.Count);
+                foreach (var u in seeded)
+                {
+                    logger?.LogInformation("[IntegrationSeed] User={User} PasswordHash={P} PinHash={Pin}", u.Username, u.PasswordHash, u.PinHash);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger?.LogWarning(ex, "[IntegrationSeed] Failed to enumerate seeded users");
+            }
+        }
+        else
         {
-            ActivationKey = "BMT-DEMO-00000",
-            Plan = BMTECHRD.Pos.Domain.Enums.LicensePlan.TRIAL_7_DAYS,
-            Status = BMTECHRD.Pos.Domain.Enums.LicenseStatus.INACTIVE,
-            Business = business
-        };
-        business.License = license;
-
-        ctx.Businesses.Add(business);
-
-        // admin
-        var admin = new BMTECHRD.Pos.Domain.Entities.User
-        {
-            Username = "admin",
-            PasswordHash = hasher.Hash("admin"),
-            PinHash = hasher.Hash("1234"),
-            Role = BMTECHRD.Pos.Domain.Enums.UserRole.ADMIN,
-            Business = business
-        };
-
-        var supervisor = new BMTECHRD.Pos.Domain.Entities.User
-        {
-            Username = "supervisor",
-            PasswordHash = hasher.Hash("supervisor"),
-            PinHash = hasher.Hash("1234"),
-            Role = BMTECHRD.Pos.Domain.Enums.UserRole.SUPERVISOR,
-            Business = business
-        };
-
-        ctx.Users.AddRange(admin, supervisor);
-
-        // 10 tables
-        var tables = Enumerable.Range(1, 10).Select(i => new BMTECHRD.Pos.Domain.Entities.Table
-        {
-            Business = business,
-            Number = i,
-            Status = BMTECHRD.Pos.Domain.Enums.TableStatus.AVAILABLE,
-            PosX = i * 10,
-            PosY = i * 5
-        }).ToList();
-
-        ctx.Tables.AddRange(tables);
-
-        ctx.SaveChanges();
+            // If businesses already exist, still log existing admin row for diagnostics
+            try
+            {
+                var existing = ctx.Users.Where(u => u.Username == "admin").Select(u => new { u.Username, u.PasswordHash, u.PinHash }).FirstOrDefault();
+                if (existing != null)
+                {
+                    logger?.LogInformation("[IntegrationSeed] Existing admin found PasswordHash={P}", existing.PasswordHash);
+                }
+                else
+                {
+                    logger?.LogInformation("[IntegrationSeed] No admin user found in DB");
+                }
+            }
+            catch (Exception ex)
+            {
+                logger?.LogWarning(ex, "[IntegrationSeed] Failed to read existing users");
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        logger?.LogError(ex, "[IntegrationSeed] Exception during development seeding");
+        throw;
     }
 }
 
