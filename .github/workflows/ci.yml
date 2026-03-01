@@ -2,41 +2,73 @@ name: CI
 
 on:
   push:
+    branches: [ master ]
   pull_request:
+    branches: [ master ]
+  workflow_dispatch: {}
 
 jobs:
-  build-test:
-    runs-on: windows-latest
-
+  build-and-test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        dotnet-version: [8.0.x]
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: ${{ matrix.dotnet-version }}
 
       - name: Restore
-        run: dotnet restore
+        run: dotnet restore BMTECHRD.Pos.slnx
 
       - name: Build
-        run: dotnet build -c Release --no-restore
+        run: dotnet build BMTECHRD.Pos.slnx -c Release --no-restore
 
-      - name: Test (AuthHarness)
-        run: dotnet test BMTECHRD.Pos.AuthHarness.Tests/BMTECHRD.Pos.AuthHarness.Tests.csproj -c Release --no-build --logger "trx;LogFileName=authharness.trx"
+      - name: Run tests
+        run: dotnet test BMTECHRD.Pos.slnx -c Release --no-build --verbosity minimal
 
-      - name: Upload test results
+      - name: Publish test artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results
+          name: test-results-${{ matrix.os }}
           path: |
-            **/*.trx
+            **/TestResults
+            **/TestResults.*
 
-      - name: Upload auth logs (if any)
+  e2e-manual:
+    name: E2E (manual)
+    runs-on: windows-latest
+    needs: build-and-test
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Start API in background
+        shell: pwsh
+        run: |
+          Start-Process -NoNewWindow -FilePath dotnet -ArgumentList 'run --project BMTECHRD.Pos.Api -c Release --urls http://localhost:41750' -PassThru | Out-Null
+          Start-Sleep -Seconds 8
+
+      - name: Run E2E verification script
+        shell: pwsh
+        run: |
+          powershell -ExecutionPolicy Bypass -File .\scripts\verify_auth_e2e.ps1 -BaseUrl http://localhost:41750
+
+      - name: Upload evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: auth-logs
-          path: |
-            ${{ env.APPDATA }}\BMTECHRD\POS\logs\auth-*.log
+          name: e2e-evidence
+          path: evidence/**
