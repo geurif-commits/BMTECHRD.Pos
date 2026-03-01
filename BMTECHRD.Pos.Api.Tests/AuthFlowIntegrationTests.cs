@@ -29,7 +29,12 @@ public sealed class AuthFlowIntegrationTests : IClassFixture<WebApplicationFacto
             deviceId = "integration-device-1"
         });
 
-        Assert.Equal(HttpStatusCode.OK, loginResp.StatusCode);
+        if (loginResp.StatusCode != HttpStatusCode.OK)
+        {
+            var body = await loginResp.Content.ReadAsStringAsync();
+            Console.WriteLine("LOGIN RESPONSE BODY:\n" + body);
+            throw new InvalidOperationException($"Login failed: {loginResp.StatusCode}");
+        }
 
         using var loginDoc = JsonDocument.Parse(await loginResp.Content.ReadAsStringAsync());
         var accessToken = loginDoc.RootElement.GetProperty("accessToken").GetString();
