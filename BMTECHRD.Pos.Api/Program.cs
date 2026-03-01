@@ -33,21 +33,6 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 {
     options.InvalidModelStateResponseFactory = context =>
     {
-        var logger = context.HttpContext.RequestServices.GetService<Microsoft.Extensions.Logging.ILogger<Program>>();
-        try
-        {
-            var errors = context.ModelState
-                .Where(kvp => kvp.Value.Errors.Count > 0)
-                .Select(kvp => new { Key = kvp.Key, Errors = kvp.Value.Errors.Select(e => e.ErrorMessage).ToArray() })
-                .ToArray();
-
-            logger?.LogInformation("[ModelValidation] Invalid model state for {Path}: {Errors}", context.HttpContext.Request.Path, System.Text.Json.JsonSerializer.Serialize(errors));
-        }
-        catch (Exception ex)
-        {
-            logger?.LogWarning(ex, "[ModelValidation] Failed to log model state");
-        }
-
         return new BadRequestObjectResult(context.ModelState);
     };
 });
@@ -168,7 +153,6 @@ if (app.Environment.IsDevelopment())
     {
         // ensure database created and migrations applied if any
         logger?.LogInformation("[IntegrationSeed] Environment={Env}", app.Environment.EnvironmentName);
-        logger?.LogInformation("[IntegrationSeed] PasswordHasher={Hasher}", hasher?.GetType().FullName ?? "<null>");
 
         ctx.Database.Migrate();
 
@@ -226,30 +210,18 @@ if (app.Environment.IsDevelopment())
 
             ctx.SaveChanges();
 
-            // Log seeded users (include hashes for diagnostic purposes only)
-            try
-            {
-                var seeded = ctx.Users.Select(u => new { u.Username, u.PasswordHash, u.PinHash }).ToList();
-                logger?.LogInformation("[IntegrationSeed] Seeded users: {Count}", seeded.Count);
-                foreach (var u in seeded)
-                {
-                    logger?.LogInformation("[IntegrationSeed] User={User} PasswordHash={P} PinHash={Pin}", u.Username, u.PasswordHash, u.PinHash);
-                }
-            }
-            catch (Exception ex)
-            {
-                logger?.LogWarning(ex, "[IntegrationSeed] Failed to enumerate seeded users");
-            }
+            // Seeded users created
+            logger?.LogInformation("[IntegrationSeed] Seeded users created");
         }
         else
         {
             // If businesses already exist, still log existing admin row for diagnostics
             try
             {
-                var existing = ctx.Users.Where(u => u.Username == "admin").Select(u => new { u.Username, u.PasswordHash, u.PinHash }).FirstOrDefault();
+                var existing = ctx.Users.Where(u => u.Username == "admin").Select(u => new { u.Username }).FirstOrDefault();
                 if (existing != null)
                 {
-                    logger?.LogInformation("[IntegrationSeed] Existing admin found PasswordHash={P}", existing.PasswordHash);
+                    logger?.LogInformation("[IntegrationSeed] Existing admin found Username={User}", existing.Username);
                 }
                 else
                 {

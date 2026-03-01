@@ -31,8 +31,6 @@ public sealed class AuthFlowIntegrationTests : IClassFixture<WebApplicationFacto
 
         if (loginResp.StatusCode != HttpStatusCode.OK)
         {
-            var body = await loginResp.Content.ReadAsStringAsync();
-            Console.WriteLine("LOGIN RESPONSE BODY:\n" + body);
             throw new InvalidOperationException($"Login failed: {loginResp.StatusCode}");
         }
 
@@ -46,16 +44,9 @@ public sealed class AuthFlowIntegrationTests : IClassFixture<WebApplicationFacto
         Assert.Equal("admin", username);
 
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-        Console.WriteLine("ACCESS TOKEN: " + accessToken);
-        Console.WriteLine("AuthHeader: " + _client.DefaultRequestHeaders.Authorization?.ToString());
         var meResp = await _client.GetAsync("/api/auth/me");
         if (meResp.StatusCode != HttpStatusCode.OK)
         {
-            var body = await meResp.Content.ReadAsStringAsync();
-            Console.WriteLine("ME RESPONSE STATUS: " + meResp.StatusCode);
-            Console.WriteLine("ME RESPONSE BODY:\n" + body);
-            foreach (var h in meResp.Headers)
-                Console.WriteLine($"ME HEADER: {h.Key}={string.Join(',', h.Value)}");
             throw new InvalidOperationException($"Me failed: {meResp.StatusCode}");
         }
 

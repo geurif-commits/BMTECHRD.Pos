@@ -21,20 +21,7 @@ public sealed class AuthController : ControllerBase
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest req, CancellationToken ct)
     {
-        try
-        {
-            _logger.LogInformation("[Auth] Login attempt Username={Username} BusinessId={BusinessId} Device={Device}", req.Username, req.BusinessId, req.DeviceId);
-        }
-        catch { }
-
         var resp = await _authService.LoginAsync(req, HttpContext.Connection.RemoteIpAddress?.ToString(), ct);
-
-        try
-        {
-            _logger.LogInformation("[Auth] Login succeeded Username={Username} BusinessId={BusinessId}", resp.Username, resp.BusinessId);
-        }
-        catch { }
-
         return Ok(resp);
     }
 
@@ -57,15 +44,6 @@ public sealed class AuthController : ControllerBase
     [HttpGet("me")]
     public IActionResult Me()
     {
-        try
-        {
-            var authHeader = HttpContext.Request.Headers["Authorization"].FirstOrDefault();
-            _logger.LogInformation("[Auth.Me] Authorization header={Header}", authHeader);
-            var claims = User.Claims.Select(c => new { c.Type, c.Value }).ToArray();
-            _logger.LogInformation("[Auth.Me] Claims={Claims}", System.Text.Json.JsonSerializer.Serialize(claims));
-        }
-        catch { }
-
         var data = _authService.Me(User);
         return Ok(new
         {
