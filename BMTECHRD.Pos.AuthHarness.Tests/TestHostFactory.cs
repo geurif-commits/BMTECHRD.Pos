@@ -39,6 +39,11 @@ public static class TestHostFactory
             .AddHttpMessageHandler<AuthHeaderHandler>()
             .ConfigurePrimaryHttpMessageHandler(() => new FakeApiHandler(state));
 
+        // Concrete ApiClient used by tests (typed client)
+        services.AddHttpClient<ApiClient>(c => { c.BaseAddress = new Uri("https://localhost:5001/"); })
+            .AddHttpMessageHandler<AuthHeaderHandler>()
+            .ConfigurePrimaryHttpMessageHandler(() => new FakeApiHandler(state));
+
         return services.BuildServiceProvider();
     }
 }
