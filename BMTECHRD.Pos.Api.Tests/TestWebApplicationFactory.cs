@@ -38,9 +38,13 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
 
     public void SeedDatabase()
     {
-        using var scope = Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var hasher = scope.ServiceProvider.GetRequiredService<BMTECHRD.Pos.Application.Abstractions.Security.IPasswordHasher>();
+        // Build a standalone in-memory DbContext for seeding to avoid DI provider conflicts
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase("IntegrationTestDb")
+            .Options;
+
+        using var db = new AppDbContext(options);
+        var hasher = new BMTECHRD.Pos.Infrastructure.Auth.PasswordHasher();
 
         db.Database.EnsureCreated();
 
