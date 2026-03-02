@@ -68,3 +68,17 @@ Status: Complete. Commit final realizado exitosamente.
 
 Éxito - Todos los cambios de la actualización a .NET 10.0 han sido comprometidos al repositorio.
 
+
+## [2026-03-01 23:03] TASK-EXECUTION: WPF validation fixes and documentation
+
+### Changes Made
+- **Verified**: WPF login works and reaches shell placeholder; API reachable at http://localhost:5000
+- **Commits**: 9e65894: "fix(wpf): configure baseUrl http://localhost:5000 and avoid StartView overwrite; fix login loop"
+- **Files Modified**: BMTECHRD.Pos.App/App.xaml.cs, BMTECHRD.Pos.App/MainWindow.xaml.cs, BMTECHRD.Pos.App/Services/MainWindowNavigationCoordinator.cs
+- **Files Created**: docs/ISSUE-STARTVIEW-LOOP.md, docs/UPGRADE-TO-NET10-SUMMARY.md, BMTECHRD.Pos.App/wpf-logs.txt, BMTECHRD.Pos.App/wpf-error-log.txt, validation-fixes-commit.txt
+- **Code Changes**: Updated default API base URL to http://localhost:5000, prevented StartView overwrite in MainWindow, reverted experimental coordinator change
+- **Build Status**: Successful: app builds and login validated
+
+### Outcome
+Success - WPF validation completed and documented.
+
