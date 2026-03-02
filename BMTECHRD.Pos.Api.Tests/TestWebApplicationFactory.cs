@@ -47,8 +47,7 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
             var business = new BMTECHRD.Pos.Domain.Entities.Business
             {
                 Name = "TEST BUSINESS",
-                CurrencyCode = "USD",
-                IsPublic = true
+                CurrencyCode = "USD"
             };
 
             var license = new BMTECHRD.Pos.Domain.Entities.License
