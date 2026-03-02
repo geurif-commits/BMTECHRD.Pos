@@ -21,9 +21,13 @@ public sealed class LicenseMiddleware
             || path.StartsWith("/api/license/status")
             || path.StartsWith("/api/license/alerts")
             || path.StartsWith("/api/business/public")
+            || path.StartsWith("/api/business/simple")
+            || path.StartsWith("/api/business") && context.Request.Method == "POST"
+            || path.StartsWith("/api/users") && context.Request.Method == "POST"
             || path.StartsWith("/api/auth/login")
             || path.StartsWith("/api/auth/refresh")
             || path.StartsWith("/api/auth/logout")
+            || path.StartsWith("/api/auth/me")
             || path.StartsWith("/swagger"))
         {
             await _next(context);

@@ -129,7 +129,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// Disable HTTPS redirect in development to avoid port issues
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseStaticFiles();
 // Authentication & Authorization (BLOQUE 4)
