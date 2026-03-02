@@ -10,7 +10,6 @@ namespace BMTECHRD.Pos.Api.Tests;
 
 public class TestWebApplicationFactory : WebApplicationFactory<Program>
 {
-    private IServiceProvider? _inMemoryServiceProvider;
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         // Use Test environment to prevent development seeding
@@ -37,18 +36,9 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
 
     public void SeedDatabase()
     {
-        // Build a standalone in-memory DbContext for seeding to avoid DI provider conflicts
-        var inMemoryServiceProvider = _inMemoryServiceProvider ?? new ServiceCollection()
-            .AddEntityFrameworkInMemoryDatabase()
-            .BuildServiceProvider();
-
-        var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseInMemoryDatabase("IntegrationTestDb")
-            .UseInternalServiceProvider(inMemoryServiceProvider)
-            .Options;
-
-        using var db = new AppDbContext(options);
-        var hasher = new BMTECHRD.Pos.Infrastructure.Auth.PasswordHasher();
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var hasher = scope.ServiceProvider.GetRequiredService<BMTECHRD.Pos.Application.Abstractions.Security.IPasswordHasher>();
 
         db.Database.EnsureCreated();
 
@@ -57,7 +47,8 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
             var business = new BMTECHRD.Pos.Domain.Entities.Business
             {
                 Name = "TEST BUSINESS",
-                CurrencyCode = "USD"
+                CurrencyCode = "USD",
+                IsPublic = true
             };
 
             var license = new BMTECHRD.Pos.Domain.Entities.License
