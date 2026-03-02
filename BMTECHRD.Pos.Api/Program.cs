@@ -54,7 +54,10 @@ builder.Services.AddScoped<IIdempotencyKeyStore, AuditLogIdempotencyKeyStore>();
 builder.Services.AddScoped<IProductionQueueService, ProductionQueueService>();
 
 // Infrastructure (DbContext, Auth services)
-builder.Services.AddInfrastructure(builder.Configuration);
+if (!builder.Environment.IsEnvironment("Test"))
+{
+    builder.Services.AddInfrastructure(builder.Configuration);
+}
 
 // JWT Authentication (BLOQUE 4 + ETAPA 9 alignment)
 var jwtSection = builder.Configuration.GetSection("Jwt");
