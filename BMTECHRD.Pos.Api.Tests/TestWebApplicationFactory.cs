@@ -39,8 +39,13 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
     public void SeedDatabase()
     {
         // Build a standalone in-memory DbContext for seeding to avoid DI provider conflicts
+        var inMemoryServiceProvider = new ServiceCollection()
+            .AddEntityFrameworkInMemoryDatabase()
+            .BuildServiceProvider();
+
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase("IntegrationTestDb")
+            .UseInternalServiceProvider(inMemoryServiceProvider)
             .Options;
 
         using var db = new AppDbContext(options);
