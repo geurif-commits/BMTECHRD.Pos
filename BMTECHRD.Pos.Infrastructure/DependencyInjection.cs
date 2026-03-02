@@ -11,8 +11,14 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration config)
     {
-        var conn = config.GetConnectionString("DefaultConnection");
-        services.AddDbContext<AppDbContext>(opt => opt.UseNpgsql(conn));
+        // In test environment we want to avoid registering the production DB provider (Npgsql).
+        // Tests will register an InMemory provider in the TestWebApplicationFactory.
+        var env = System.Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        if (string.IsNullOrEmpty(env) || !env.Equals("Test", System.StringComparison.OrdinalIgnoreCase))
+        {
+            var conn = config.GetConnectionString("DefaultConnection");
+            services.AddDbContext<AppDbContext>(opt => opt.UseNpgsql(conn));
+        }
 
         // Auth and policies
         services.AddScoped<IPasswordHasher, PasswordHasher>();
