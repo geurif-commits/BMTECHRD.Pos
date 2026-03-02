@@ -16,6 +16,9 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
         // Use Test environment to prevent development seeding
         builder.UseEnvironment("Test");
 
+        // Ensure process environment variable is set so AddInfrastructure can detect Test env if it reads env vars
+        System.Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Test");
+
         builder.ConfigureTestServices(services =>
         {
             // Remove ALL DbContext and DbContextOptions registrations
@@ -24,15 +27,10 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
             services.RemoveAll<DbContextOptions<AppDbContext>>();
             services.RemoveAll<AppDbContext>();
 
-            // Register InMemoryDatabase with its own internal service provider to avoid provider conflicts
-            _inMemoryServiceProvider = new ServiceCollection()
-                .AddEntityFrameworkInMemoryDatabase()
-                .BuildServiceProvider();
-
+            // Register InMemoryDatabase
             services.AddDbContext<AppDbContext>(options =>
             {
-                options.UseInMemoryDatabase("IntegrationTestDb")
-                       .UseInternalServiceProvider((IServiceProvider)_inMemoryServiceProvider);
+                options.UseInMemoryDatabase("IntegrationTestDb");
             });
         });
     }
