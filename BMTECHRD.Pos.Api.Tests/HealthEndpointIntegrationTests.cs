@@ -4,13 +4,14 @@ using Xunit;
 
 namespace BMTECHRD.Pos.Api.Tests;
 
-public class HealthEndpointIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
+public class HealthEndpointIntegrationTests : IClassFixture<TestWebApplicationFactory>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly TestWebApplicationFactory _factory;
 
-    public HealthEndpointIntegrationTests(WebApplicationFactory<Program> factory)
+    public HealthEndpointIntegrationTests(TestWebApplicationFactory factory)
     {
         _factory = factory;
+        _factory.SeedDatabase(); // Ensure database is seeded
     }
 
     [Fact]

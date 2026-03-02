@@ -7,12 +7,15 @@ using Xunit;
 
 namespace BMTECHRD.Pos.Api.Tests;
 
-public sealed class AuthFlowIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class AuthFlowIntegrationTests : IClassFixture<TestWebApplicationFactory>
 {
     private readonly HttpClient _client;
+    private readonly TestWebApplicationFactory _factory;
 
-    public AuthFlowIntegrationTests(WebApplicationFactory<Program> factory)
+    public AuthFlowIntegrationTests(TestWebApplicationFactory factory)
     {
+        _factory = factory;
+        _factory.SeedDatabase(); // Ensure database is seeded
         _client = factory.CreateClient();
     }
 

@@ -24,4 +24,11 @@ public sealed class BusinessController : ControllerBase
         var response = await _businessService.CreateAsync(request, logo, ct);
         return CreatedAtAction(null, response);
     }
+
+    [HttpPost("simple")]
+    public async Task<IActionResult> CreateSimple([FromBody] CreateBusinessRequest request, CancellationToken ct)
+    {
+        var response = await _businessService.CreateAsync(request, null, ct);
+        return CreatedAtAction(null, response);
+    }
 }

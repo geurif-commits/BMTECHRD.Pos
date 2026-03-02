@@ -36,8 +36,15 @@ public sealed class UsersService : IUsersService
 
     public async Task<Guid> CreateAsync(CreateUserRequest req, CancellationToken ct)
     {
-        var actor = await _ctx.Users.FindAsync(new object?[] { req.ActorUserId }, ct);
-        EnsureAdminOrSupervisor(actor, req.BusinessId);
+        // Check if this is the first user for the business (bootstrap scenario)
+        var isFirstUser = !await _ctx.Users.AnyAsync(u => u.BusinessId == req.BusinessId, ct);
+
+        if (!isFirstUser)
+        {
+            // If not first user, validate actor permissions
+            var actor = await _ctx.Users.FindAsync(new object?[] { req.ActorUserId }, ct);
+            EnsureAdminOrSupervisor(actor, req.BusinessId);
+        }
 
         if (await _ctx.Users.AnyAsync(u => u.BusinessId == req.BusinessId && u.Username == req.Username, ct))
             throw new ApiProblemException(StatusCodes.Status409Conflict, "Username conflict", "Username already exists for this business", "USER_USERNAME_EXISTS");

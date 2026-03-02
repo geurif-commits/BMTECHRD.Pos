@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net.Http;
 using System.Windows;
 using BMTECHRD.Pos.App.Services;
@@ -81,7 +81,7 @@ public partial class App : System.Windows.Application
         var baseUrl = TryReadStringProperty(config, "ApiBaseUrl")
                    ?? TryReadStringProperty(config, "BaseUrl")
                    ?? TryReadStringProperty(config, "ServerUrl")
-                   ?? "https://localhost:5001/";
+                   ?? "http://localhost:5000/";
 
         if (!baseUrl.EndsWith('/')) baseUrl += "/";
 

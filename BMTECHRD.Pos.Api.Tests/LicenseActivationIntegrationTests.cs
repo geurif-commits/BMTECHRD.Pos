@@ -6,12 +6,15 @@ using Xunit;
 
 namespace BMTECHRD.Pos.Api.Tests;
 
-public sealed class LicenseActivationIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class LicenseActivationIntegrationTests : IClassFixture<TestWebApplicationFactory>
 {
     private readonly HttpClient _client;
+    private readonly TestWebApplicationFactory _factory;
 
-    public LicenseActivationIntegrationTests(WebApplicationFactory<Program> factory)
+    public LicenseActivationIntegrationTests(TestWebApplicationFactory factory)
     {
+        _factory = factory;
+        _factory.SeedDatabase(); // Ensure database is seeded
         _client = factory.CreateClient();
     }
 

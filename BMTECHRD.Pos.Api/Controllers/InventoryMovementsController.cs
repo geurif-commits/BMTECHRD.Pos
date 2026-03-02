@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace BMTECHRD.Pos.Api.Controllers;
 
 [ApiController]
-[Route("api/inventory")]
+[Route("api/inventory-movements")]
 public sealed class InventoryMovementsController : ControllerBase
 {
     private readonly IInventoryMovementsService _service;
