@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -19,7 +19,7 @@ namespace BMTECHRD.Pos.App
         private readonly IMainWindowNavigationCoordinator _navigationCoordinator;
         private BMTECHRD.Pos.Auth.Core.Services.AuthSessionService? _authSession;
         private SignalRClient? _signalR;
-        private string _baseUrl = "https://localhost:5001/";
+        private string _baseUrl = "http://localhost:5000/";
 
         private void OnSessionExpired(object? sender, EventArgs e)
         {
@@ -90,7 +90,13 @@ namespace BMTECHRD.Pos.App
                 return;
             }
 
-            Content = _navigationCoordinator.BuildStartContent(api, _authSession, OnLoginSuccess);
+            // NOTE: Commented out to avoid overwriting LoginView that App.xaml.cs already navigated to
+            // The new LoginView (from NavigationService.GoToLoginAsync) is the correct one to use
+            // Content = _navigationCoordinator.BuildStartContent(api, _authSession, OnLoginSuccess);
+
+            // Wire up SessionExpired event
+            _authSession.SessionExpired -= OnSessionExpired;
+            _authSession.SessionExpired += OnSessionExpired;
         }
 
         private void OnLoginSuccess(SessionModel session)
@@ -127,7 +133,7 @@ namespace BMTECHRD.Pos.App
             var url = TryReadStringProperty(config, "ApiBaseUrl")
                    ?? TryReadStringProperty(config, "BaseUrl")
                    ?? TryReadStringProperty(config, "ServerUrl")
-                   ?? "https://localhost:5001/";
+                   ?? "http://localhost:5000/";
 
             url = url.Trim();
             if (!url.EndsWith('/')) url += "/";
