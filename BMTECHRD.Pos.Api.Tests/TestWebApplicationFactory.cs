@@ -23,10 +23,15 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
             services.RemoveAll<DbContextOptions<AppDbContext>>();
             services.RemoveAll<AppDbContext>();
 
-            // Register InMemoryDatabase  
+            // Register InMemoryDatabase with its own internal service provider to avoid provider conflicts
+            var inMemoryServiceProvider = new ServiceCollection()
+                .AddEntityFrameworkInMemoryDatabase()
+                .BuildServiceProvider();
+
             services.AddDbContext<AppDbContext>(options =>
             {
-                options.UseInMemoryDatabase("IntegrationTestDb");
+                options.UseInMemoryDatabase("IntegrationTestDb")
+                       .UseInternalServiceProvider(inMemoryServiceProvider);
             });
         });
     }
