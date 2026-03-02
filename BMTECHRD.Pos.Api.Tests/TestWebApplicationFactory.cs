@@ -10,6 +10,7 @@ namespace BMTECHRD.Pos.Api.Tests;
 
 public class TestWebApplicationFactory : WebApplicationFactory<Program>
 {
+    private IServiceProvider? _inMemoryServiceProvider;
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         // Use Test environment to prevent development seeding
@@ -24,14 +25,14 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
             services.RemoveAll<AppDbContext>();
 
             // Register InMemoryDatabase with its own internal service provider to avoid provider conflicts
-            var inMemoryServiceProvider = new ServiceCollection()
+            _inMemoryServiceProvider = new ServiceCollection()
                 .AddEntityFrameworkInMemoryDatabase()
                 .BuildServiceProvider();
 
             services.AddDbContext<AppDbContext>(options =>
             {
                 options.UseInMemoryDatabase("IntegrationTestDb")
-                       .UseInternalServiceProvider(inMemoryServiceProvider);
+                       .UseInternalServiceProvider((IServiceProvider)_inMemoryServiceProvider);
             });
         });
     }
@@ -39,7 +40,7 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
     public void SeedDatabase()
     {
         // Build a standalone in-memory DbContext for seeding to avoid DI provider conflicts
-        var inMemoryServiceProvider = new ServiceCollection()
+        var inMemoryServiceProvider = _inMemoryServiceProvider ?? new ServiceCollection()
             .AddEntityFrameworkInMemoryDatabase()
             .BuildServiceProvider();
 
