@@ -52,9 +52,9 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
 
             var license = new BMTECHRD.Pos.Domain.Entities.License
             {
-                ActivationKey = "TEST-KEY",
-                Plan = BMTECHRD.Pos.Domain.Enums.LicensePlan.LIFETIME,
-                Status = BMTECHRD.Pos.Domain.Enums.LicenseStatus.ACTIVE,
+                ActivationKey = "BMT-DEMO-00000",
+                Plan = BMTECHRD.Pos.Domain.Enums.LicensePlan.TRIAL_7_DAYS,
+                Status = BMTECHRD.Pos.Domain.Enums.LicenseStatus.INACTIVE,
                 Business = business
             };
             business.License = license;
